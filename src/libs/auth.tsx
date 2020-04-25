@@ -107,7 +107,7 @@ class Auth {
         url: `${process.env.REACT_APP_API_URL}/is-phone-in-db`,
         headers: {
           "Content-Type": "application/json",
-          "app-id": process.env.REACT_APP_ID!,
+          "app-id": process.env.REACT_APP_ID!, 
         },
         data: {
           phone: encrypted,
