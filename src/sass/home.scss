@@ -1,0 +1,109 @@
+.circle-button {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  background-color: #dddddd;
+  cursor: pointer;
+
+  img {
+    width: 30px;
+  }
+
+  &.large {
+    width: 70px;
+    height: 70px;
+
+    img {
+      width: 50px;
+    }
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &.primary {
+    background-color: #2962ff;
+    &:hover {
+      background-color: #2990ff;
+    }
+  }
+
+  &.accent {
+    background-color: #f50057;
+    &:hover {
+      background-color: rgb(255, 45, 143);
+    }
+  }
+}
+
+#main {
+  display: flex;
+  height: calc(100vh - 80px);
+  padding-top: 10px;
+
+  .section-header {
+    padding: 15px 20px;
+    background-color: #f0f0f0;
+    border-top-right-radius: 20px;
+    border-top-left-radius: 20px;
+  }
+
+  #chat {
+    flex: 1;
+  }
+
+  #local {
+    border-radius: 20px;
+    position: relative;
+    flex: 1;
+    text-align: center;
+    background-color: #d2d2d2;
+
+    .section-header {
+      #status {
+        display: flex;
+        div {
+          width: 20px;
+          height: 20px;
+          display: inline-block;
+          background-color: #00c853;
+          border-radius: 50%;
+          margin-right: 10px;
+        }
+      }
+    }
+
+    #local-video {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      width: 120px;
+      border-radius: 10px;
+    }
+
+    .remote-video {
+      width: 120px;
+      height: 150px;
+      border-radius: 10px;
+      background-color: #000;
+    }
+
+    #call-actions {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+    }
+  }
+
+  #board {
+    flex: 1;
+  }
+}
+
+.ant-modal-confirm-btns-hide {
+  .ant-modal-confirm-btns {
+    display: none;
+  }
+}

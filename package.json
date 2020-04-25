@@ -10,11 +10,25 @@
     "@types/node": "^12.12.37",
     "@types/react": "^16.9.34",
     "@types/react-dom": "^16.9.6",
+    "antd": "^4.1.4",
     "axios": "^0.19.2",
+    "crypto-js": "^4.0.0",
+    "firebase": "^7.14.2",
+    "moment": "^2.24.0",
+    "node-sass": "^4.14.0",
+    "phone": "^2.4.9",
     "react": "^16.13.1",
+    "react-code-input": "^3.9.0",
     "react-dom": "^16.13.1",
+    "react-phone-input-2": "^2.13.3",
+    "react-phone-number-input": "^3.0.22",
+    "react-router-dom": "^5.1.2",
     "react-scripts": "3.4.1",
-    "typescript": "^3.7.5"
+    "socket.io": "^2.3.0",
+    "styled-components": "^5.1.0",
+    "twilio-video": "^2.0.0",
+    "typescript": "^3.7.5",
+    "webrtc-adapter": "^7.5.1"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -36,5 +50,16 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^3.1.44",
+    "@types/phone": "^2.4.0",
+    "@types/react-router-dom": "^5.1.4",
+    "@types/socket.io-client": "^1.4.32",
+    "@types/styled-components": "^5.1.0",
+    "@typescript-eslint/eslint-plugin": "^2.29.0",
+    "@typescript-eslint/parser": "^2.29.0",
+    "eslint": "^6.8.0",
+    "eslint-plugin-react": "^7.19.0"
   }
 }
