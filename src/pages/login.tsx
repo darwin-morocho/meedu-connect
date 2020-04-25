@@ -91,8 +91,8 @@ export default class Login extends React.PureComponent<{
     const { fetching, phoneNumber, step, captchaOk, phoneOk, pin } = this.state;
     return (
       <Container>
-        <img src={require("../assets/login.svg")} />
-        <div className="ma-left-40" style={{ maxWidth: 350 }}>
+        <img src={require("../assets/login.svg")} className="d-none-768" />
+        <div className="ma-left-40 ma-left-0-768" style={{ maxWidth: 350 }}>
           <h1 className="fw-300 t-center bold">Iniciar Sesión</h1>
           {step !== LoginStep.verify && (
             <PhoneInput

@@ -200,7 +200,7 @@ export default class Home extends React.PureComponent<
     return (
       <Template>
         <div id="main">
-          <div id="chat"></div>
+          <div id="chat" className="d-none-768"></div>
           <div id="local">
             <div className="section-header d-flex jc-space-between ai-center">
               <div id="status">
@@ -281,7 +281,7 @@ export default class Home extends React.PureComponent<
               </button>
             </div>
           </div>
-          <div id="board"></div>
+          <div id="board" className="d-none-768"></div>
         </div>
       </Template>
     );
