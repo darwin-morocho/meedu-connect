@@ -89,10 +89,16 @@
         top: 0;
 
         .remote-video {
+          position: relative;
           width: 120px;
+          margin-top: 10px;
+          max-width: 120px;
+          max-height: 150px;
           height: 150px;
           border-radius: 10px;
-          background-color: #000;
+          margin-left: 10px;
+          border: 1px solid rgb(255, 255, 255);
+          background-color: rgb(205, 205, 205);
 
           video { 
             position: absolute;
@@ -107,7 +113,7 @@
             object-fit: fill;
             background-size: cover;
             overflow: hidden;
-            border-radius: 0px 0px 20px 20px;
+            border-radius:10px;
           }
         }
       }
