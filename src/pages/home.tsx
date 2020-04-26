@@ -188,6 +188,53 @@ export default class Home extends React.PureComponent<
     this.setState({ joined: false, connections: [] });
   };
 
+  MicrophoneButton = () => {
+    const { microphoneEnabled } = this.state;
+    return (
+      <button
+        className="circle-button"
+        onClick={() => {
+          meeduConnect.microphone(!microphoneEnabled);
+          this.setState({
+            microphoneEnabled: !microphoneEnabled,
+          });
+        }}
+      >
+        <img
+          src={
+            microphoneEnabled
+              ? require("../assets/microphone.svg")
+              : require("../assets/microphone-off.svg")
+          }
+          width="40"
+        />
+      </button>
+    );
+  };
+
+  CameraButton = () => {
+    const { cameraEnabled } = this.state;
+    return (
+      <button
+        className="circle-button"
+        onClick={() => {
+          meeduConnect.camera(!cameraEnabled);
+          this.setState({ cameraEnabled: !cameraEnabled });
+        }}
+      >
+        <img
+          src={
+            cameraEnabled
+              ? require("../assets/video-camera.svg")
+              : require("../assets/video-camera-off.svg")
+          }
+          width="40"
+          style={{ color: "#000" }}
+        />
+      </button>
+    );
+  };
+
   render() {
     const {
       connected,
@@ -284,39 +331,9 @@ export default class Home extends React.PureComponent<
                   /> */}
 
                   <div className="w-100 d-flex ma-bottom-20">
-                    <button
-                      className="circle-button"
-                      onClick={() => {
-                        this.setState({
-                          microphoneEnabled: !microphoneEnabled,
-                        });
-                      }}
-                    >
-                      <img
-                        src={
-                          microphoneEnabled
-                            ? require("../assets/microphone.svg")
-                            : require("../assets/microphone-off.svg")
-                        }
-                        width="40"
-                      />
-                    </button>
-                    <button
-                      className="circle-button ma-left-20"
-                      onClick={() => {
-                        this.setState({ cameraEnabled: !cameraEnabled });
-                      }}
-                    >
-                      <img
-                        src={
-                          cameraEnabled
-                            ? require("../assets/video-camera.svg")
-                            : require("../assets/video-camera-off.svg")
-                        }
-                        width="40"
-                        style={{ color: "#000" }}
-                      />
-                    </button>
+                    {this.MicrophoneButton()}
+                    <div style={{ width: 15 }} />
+                    {this.CameraButton()}
                   </div>
                   <div className="d-flex w-100">
                     <input
@@ -340,9 +357,7 @@ export default class Home extends React.PureComponent<
 
             {/* STSRT ACTIONS */}
             <div id="call-actions" className={joined ? "" : "d-none"}>
-              <button className="circle-button primary">
-                <img src={require("../assets/microphone.svg")} width="40" />
-              </button>
+              {this.MicrophoneButton()}
               <button
                 onClick={this.leave}
                 className="circle-button accent large ma-hor-20"
@@ -350,13 +365,7 @@ export default class Home extends React.PureComponent<
                 <img src={require("../assets/end-call.svg")} width="40" />
               </button>
 
-              <button className="circle-button">
-                <img
-                  src={require("../assets/video-camera.svg")}
-                  width="40"
-                  style={{ color: "#000" }}
-                />
-              </button>
+              {this.CameraButton()}
             </div>
             {/* END ACTIONS */}
           </div>

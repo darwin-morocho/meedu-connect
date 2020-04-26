@@ -274,6 +274,26 @@ export class MeeduConnect {
   private emit(event: string, data: any) {
     this.socket!.emit(event, data);
   }
+
+  /**
+   * enable or disable the microphone
+   * @param enabled
+   */
+  microphone(enabled: boolean): void {
+    if (this.localStream) {
+      this.localStream.getAudioTracks()[0].enabled = enabled;
+    }
+  }
+
+  /**
+   * enable or disable the camera
+   * @param enabled
+   */
+  camera(enabled: boolean): void {
+    if (this.localStream) {
+      this.localStream.getVideoTracks()[0].enabled = enabled;
+    }
+  }
 }
 
 export default new MeeduConnect();
