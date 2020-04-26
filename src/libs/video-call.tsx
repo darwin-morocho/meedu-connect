@@ -46,9 +46,10 @@ export class MeeduConnect {
   private socket: SocketIOClient.Socket | null = null;
   localStream: MediaStream | undefined = undefined;
   onConnected: On | null = null;
+  onConnectError: On | null = null;
   onDisconnected: On | null = null;
   onDisconnectedUser: On | null = null;
-  onResponse: On | null = null;
+  onRoomNotFound: On | null = null;
   onJoinedTo: OnJoinedTo | null = null;
   onJoined: OnJoined | null = null;
   connected: boolean = false;
@@ -169,6 +170,9 @@ export class MeeduConnect {
 
     this.socket.on("connect_error", (data: any) => {
       console.log("connect_error:", data);
+      if (this.onConnectError) {
+        this.onConnectError();
+      }
     });
 
     // joined to room
@@ -215,6 +219,11 @@ export class MeeduConnect {
 
     // ice candidate recived
     this.socket.on("ice-canditate", this.onIceCandidate);
+    this.socket.on("room-not-found", (roomName: string) => {
+      if (this.onRoomNotFound) {
+        this.onRoomNotFound(roomName);
+      }
+    });
 
     // an user was disconnected
     this.socket.on("disconnected-user", (socketId: string) => {

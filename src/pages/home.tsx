@@ -56,6 +56,10 @@ export default class Home extends React.PureComponent<
         this.setState({ connected: true });
       };
 
+      meeduConnect.onConnectError = () => {
+       // message.error("No se pudo conectar al servicio de meedu connect");
+      };
+
       meeduConnect.onDisconnected = () => {
         console.log("disconnected");
         this.setState({ connected: false });
@@ -93,6 +97,14 @@ export default class Home extends React.PureComponent<
           connections.push(item.socketId);
         });
         this.setState({ joined: true, connections });
+      };
+
+      meeduConnect.onRoomNotFound = (roomName: string) => {
+        Modal.error({
+          title: "Meet no encontrado",
+          content: <div>{roomName}</div>,
+          okText: "ACEPTAR",
+        });
       };
 
       meeduConnect.onRemoteStream = (data) => {
