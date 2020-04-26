@@ -1,15 +1,15 @@
 /* eslint-disable no-unused-vars */
 import "webrtc-adapter";
 import React from "react";
-import io from "socket.io-client";
 import auth from "../libs/auth";
-
+import Lottie from "react-lottie";
 import Template from "../components/template";
 import meeduConnect, { UserConnection } from "../libs/video-call";
 import MenuItem from "antd/lib/menu/MenuItem";
 import "../sass/home.scss";
 import { Dropdown, Button, Menu, message, Modal, Input } from "antd";
 import { MoreOutlined } from "@ant-design/icons";
+import Loading from "../components/loading";
 
 export default class Home extends React.PureComponent<
   {
@@ -17,26 +17,30 @@ export default class Home extends React.PureComponent<
   },
   {
     permissionsOK: boolean;
-    request: any;
+    loading: boolean;
     connecting: boolean;
     connected: boolean;
     joined: boolean;
     connections: string[];
+    cameraEnabled: boolean;
+    microphoneEnabled: boolean;
   }
 > {
   localVideo: HTMLVideoElement | null = null;
   videoRefs = new Map<string, HTMLVideoElement>();
   state = {
     permissionsOK: false,
-    request: null,
-    callingId: null,
+    loading: false,
     connected: false,
-    uploads: [],
-    messages: [],
+
     connecting: true,
     joined: false,
+    microphoneEnabled: true,
+    cameraEnabled: true,
     connections: [] as string[],
   };
+
+  meetCode = "";
 
   async componentDidMount() {
     const token = await auth.getAccessToken();
@@ -57,7 +61,7 @@ export default class Home extends React.PureComponent<
       };
 
       meeduConnect.onConnectError = () => {
-       // message.error("No se pudo conectar al servicio de meedu connect");
+        // message.error("No se pudo conectar al servicio de meedu connect");
       };
 
       meeduConnect.onDisconnected = () => {
@@ -111,17 +115,17 @@ export default class Home extends React.PureComponent<
         if (this.videoRefs.has(data.socketId)) {
           const ref = this.videoRefs.get(data.socketId);
           ref!.srcObject = data.stream;
-          // ref!.play();
         }
       };
     }
   }
 
   createMeet = async (): Promise<void> => {
+    this.setState({ loading: true });
     const response = await meeduConnect.createRoom();
-
+    this.setState({ loading: false });
     if (response.status == 200) {
-      meeduConnect.joinToRoom(response.data);
+      this.shareMeet(response.data);
     } else {
       message.info(response.data);
     }
@@ -132,40 +136,17 @@ export default class Home extends React.PureComponent<
       message.error("No estas conectado al servicio de meedu connect");
       return;
     }
-
-    let room = "";
-
-    const modal = Modal.success({
-      width: 600,
-      title: "Compartir Meet",
-      maskClosable: true,
-      okCancel: false,
-
-      content: (
-        <div>
-          <Input
-            onChange={(e) => {
-              room = e.target.value;
-            }}
-          />
-        </div>
-      ),
-      centered: true,
-      okText: "UNIRSE",
-      onOk: () => {
-        if (room.trim().length > 0) {
-          meeduConnect.joinToRoom(room);
-          message.info("Uniendose al room");
-        } else {
-          message.info("Room inválido");
-        }
-      },
-    });
+    if (this.meetCode.trim().length > 0) {
+      meeduConnect.joinToRoom(this.meetCode);
+      message.info("Uniendose al Meet");
+    } else {
+      message.info("Código inválido");
+    }
   };
 
-  shareMeet = async () => {
-    if (!meeduConnect.room) {
-      message.error("room null");
+  shareMeet = async (room: string | null) => {
+    if (!room) {
+      message.error("Meet null");
       return;
     }
     // meeduConnect.room;
@@ -179,14 +160,14 @@ export default class Home extends React.PureComponent<
       content: (
         <div className="ma-bottom-10">
           <Input
-            value={meeduConnect.room}
+            value={room}
             readOnly
             addonAfter={
               <Button
                 type="link"
                 size="small"
                 onClick={() => {
-                  navigator.clipboard.writeText(meeduConnect.room!);
+                  navigator.clipboard.writeText(room!);
                   message.info("Copiado");
                   modal.destroy();
                 }}
@@ -208,12 +189,21 @@ export default class Home extends React.PureComponent<
   };
 
   render() {
-    const { connected, joined, connections } = this.state;
+    const {
+      connected,
+      joined,
+      connections,
+      loading,
+      cameraEnabled,
+      microphoneEnabled,
+    } = this.state;
     return (
       <Template>
         <div id="main">
           <div id="chat" className="d-none-768"></div>
-          <div id="local">
+
+          {/* START LOCAL */}
+          <div id="local" className="d-flex flex-column">
             <div className="section-header d-flex jc-space-between ai-center">
               <div id="status">
                 <div
@@ -225,7 +215,11 @@ export default class Home extends React.PureComponent<
                 overlay={
                   <Menu>
                     <Menu.Item
-                      onClick={joined ? this.shareMeet : this.createMeet}
+                      onClick={
+                        joined
+                          ? () => this.shareMeet(meeduConnect.room)
+                          : this.createMeet
+                      }
                     >
                       {joined ? "compartir meet" : "Crear meet"}
                     </Menu.Item>
@@ -247,32 +241,104 @@ export default class Home extends React.PureComponent<
               </Dropdown>
             </div>
 
-            <div className="d-flex flex-wrap">
-              {connections.map((socketId) => (
-                <div key={socketId} className="ma-10">
-                  <video
-                    id={`video-${socketId}`}
-                    ref={(ref) => {
-                      if (!this.videoRefs.has(socketId)) {
-                        this.videoRefs.set(socketId, ref!);
-                      }
+            <div id="local-container">
+              {/* LOCAL VIDEO */}
+              <video
+                id="local-video"
+                ref={(ref) => (this.localVideo = ref)}
+                playsInline
+                autoPlay
+                muted
+              />
+              {/* END LOCAL VIDEO */}
+
+              <div id="conections" className="d-flex flex-wrap">
+                {connections.map((socketId) => (
+                  <div key={socketId} className="remote-video">
+                    <video
+                      id={`video-${socketId}`}
+                      ref={(ref) => {
+                        if (!this.videoRefs.has(socketId)) {
+                          this.videoRefs.set(socketId, ref!);
+                        }
+                      }}
+                      autoPlay
+                      muted={false}
+                      playsInline
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {!joined && (
+                <div
+                  id="no-joined"
+                  className="pa-40 pa-10-768 d-flex flex-column ai-center jc-end"
+                >
+                  {/* <Lottie
+                    options={{
+                      autoplay: true,
+                      animationData: require("../assets/lottie/developer.json"),
                     }}
-                    autoPlay
-                    muted={false}
-                    playsInline
-                    className="remote-video"
-                  />
+                    height={300}
+                  /> */}
+
+                  <div className="w-100 d-flex ma-bottom-20">
+                    <button
+                      className="circle-button"
+                      onClick={() => {
+                        this.setState({
+                          microphoneEnabled: !microphoneEnabled,
+                        });
+                      }}
+                    >
+                      <img
+                        src={
+                          microphoneEnabled
+                            ? require("../assets/microphone.svg")
+                            : require("../assets/microphone-off.svg")
+                        }
+                        width="40"
+                      />
+                    </button>
+                    <button
+                      className="circle-button ma-left-20"
+                      onClick={() => {
+                        this.setState({ cameraEnabled: !cameraEnabled });
+                      }}
+                    >
+                      <img
+                        src={
+                          cameraEnabled
+                            ? require("../assets/video-camera.svg")
+                            : require("../assets/video-camera-off.svg")
+                        }
+                        width="40"
+                        style={{ color: "#000" }}
+                      />
+                    </button>
+                  </div>
+                  <div className="d-flex w-100">
+                    <input
+                      placeholder="Ingresa aquí tu código"
+                      onChange={(e) => {
+                        this.meetCode = e.target.value;
+                      }}
+                      style={{ letterSpacing: 2 }}
+                    />
+                    <button
+                      className="join"
+                      style={{ letterSpacing: 1 }}
+                      onClick={this.joinToMeet}
+                    >
+                      UNIRME
+                    </button>
+                  </div>
                 </div>
-              ))}
+              )}
             </div>
 
-            <video
-              id="local-video"
-              ref={(ref) => (this.localVideo = ref)}
-              playsInline
-              autoPlay
-              muted
-            />
+            {/* STSRT ACTIONS */}
             <div id="call-actions" className={joined ? "" : "d-none"}>
               <button className="circle-button primary">
                 <img src={require("../assets/microphone.svg")} width="40" />
@@ -292,9 +358,12 @@ export default class Home extends React.PureComponent<
                 />
               </button>
             </div>
+            {/* END ACTIONS */}
           </div>
+          {/* END LOCAL */}
           <div id="board" className="d-none-768"></div>
         </div>
+        <Loading open={loading} />
       </Template>
     );
   }

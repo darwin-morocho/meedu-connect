@@ -18,9 +18,6 @@ const Container = styled.div`
   overflow: hidden;
   height: 100vh;
   #logo {
-    height: 70px;
-    width: 140px;
-    color: #25364e !important;
   }
   #nav {
     height: 70px;
@@ -69,7 +66,7 @@ export default class Template extends PureComponent<{
             className="d-flex ai-center jc-center pointer"
             onClick={() => (window.location.href = "/home")}
           >
-            <span className="f-30">VCHAT</span>
+            <img src={require("../assets/logo2.svg")} height={50} />
           </div>
           <div className="d-flex ai-center">
             <Divider type="vertical" className="ma-right-20" />

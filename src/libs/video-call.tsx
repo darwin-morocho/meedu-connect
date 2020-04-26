@@ -56,6 +56,8 @@ export class MeeduConnect {
   private meeduAPI!: MeeduConnectAPI;
   private currentRoom: string | null = null;
   onRemoteStream: OnRemoteStream | null = null;
+  cameraEnabled: boolean = true;
+  microphoneEnabled: boolean = true;
 
   // get the current room
   get room(): string | null {
