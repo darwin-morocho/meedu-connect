@@ -320,7 +320,9 @@ export default class Home extends React.PureComponent<
                 <div
                   style={{ backgroundColor: connected ? "#00C853" : "#F50057" }}
                 ></div>
-                <span>{connected ? "Conectado" : "Desconectado"}</span>
+                <span className="d-none-480">
+                  {connected ? "Conectado" : "Desconectado"}
+                </span>
               </div>
 
               <div>
