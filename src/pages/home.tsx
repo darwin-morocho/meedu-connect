@@ -274,6 +274,7 @@ export default class Home extends React.PureComponent<
   leave = () => {
     meeduConnect.leaveRoom();
     this.videoRefs.clear();
+    this.meetCode = "";
     this.setState({ room: null });
   };
 
