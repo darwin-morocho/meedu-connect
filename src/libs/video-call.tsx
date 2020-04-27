@@ -139,7 +139,7 @@ export class MeeduConnect {
     this.meeduAPI = new MeeduConnectAPI(options.stHost);
     const mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: true,
-      video: { width: 480, height: 480 },
+      video: { width: 480, height: 640 },
     });
     if (mediaStream) {
       // if was successfull

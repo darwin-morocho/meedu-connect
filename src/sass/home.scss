@@ -69,7 +69,7 @@
 
   #local {
     border-radius: 20px;
-    border-bottom-left-radius: 70px;
+    border-bottom-left-radius: 20px;
     position: relative;
     flex: 1;
     text-align: center;
@@ -98,14 +98,14 @@
     }
 
     #local-container {
-      max-height: 140px;
-      min-height: 140px;
+      max-height: 186px;
+      min-height: 186px;
       margin: 10px;
       max-width: 140px;
       min-width: 140px;
 
       position: relative;
-      border-radius: 50%;
+      border-radius: 10px;
 
       #local-video {
         position: absolute;
@@ -120,7 +120,7 @@
         object-fit: fill;
         background-size: cover;
         overflow: hidden;
-        border-radius: 50%;
+        border-radius: 10px;
         -webkit-box-shadow: 6px 7px 11px -5px rgba(0, 0, 0, 0.75);
         -moz-box-shadow: 6px 7px 11px -5px rgba(0, 0, 0, 0.75);
         box-shadow: 6px 7px 11px -5px rgba(0, 0, 0, 0.75);
@@ -129,17 +129,47 @@
     #conections {
       .remote-video {
         position: relative;
-        width: 150px;
+        width: 100px;
+        max-width: 100px;
         margin-top: 10px;
-        max-width: 150px;
-        max-height: 150px;
-        height: 150px;
+        height: 133px;
+        max-height: 133px;
+
         border-radius: 10px;
         margin-left: 10px;
         margin-bottom: 35px;
 
         background-color: rgb(205, 205, 205);
-        border-radius: 50%;
+        border-radius: 10px;
+
+        .user-media-icons {
+          position: absolute;
+          bottom: 10px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          .media-icon {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 5px;
+            margin-right: 5px;
+            border-radius: 50%;
+
+            background-color: #fe065c;
+
+            &.active {
+              background-color: #d2d2d27c;
+            }
+
+            &:last-child {
+              margin-right: 0;
+            }
+          }
+        }
 
         video {
           position: absolute;
@@ -154,7 +184,7 @@
           object-fit: fill;
           background-size: cover;
           overflow: hidden;
-          border-radius: 50%;
+          border-radius: 10px;
           -webkit-box-shadow: 6px 7px 11px -5px rgba(0, 0, 0, 0.75);
           -moz-box-shadow: 6px 7px 11px -5px rgba(0, 0, 0, 0.75);
           box-shadow: 6px 7px 11px -5px rgba(0, 0, 0, 0.75);
