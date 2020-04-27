@@ -70,7 +70,8 @@ export default class Home extends React.PureComponent<
       };
 
       meeduConnect.onDisconnectedUser = (socketId: string) => {
-        this.videoRefs.delete(socketId);
+        const deleted = this.videoRefs.delete(socketId);
+        console.log("deleted" + socketId, deleted);
 
         console.log("disconnected user jaja:", socketId);
         const { connections } = this.state;
@@ -112,10 +113,13 @@ export default class Home extends React.PureComponent<
       };
 
       meeduConnect.onRemoteStream = (data) => {
-        if (this.videoRefs.has(data.socketId)) {
-          const ref = this.videoRefs.get(data.socketId);
-          ref!.srcObject = data.stream;
-        }
+        console.log("refs", this.videoRefs);
+        setTimeout(() => {
+          if (this.videoRefs.has(data.socketId)) {
+            const ref = this.videoRefs.get(data.socketId);
+            ref!.srcObject = data.stream;
+          }
+        }, 500);
       };
     }
   }
@@ -234,7 +238,8 @@ export default class Home extends React.PureComponent<
   leave = () => {
     meeduConnect.leaveRoom();
     this.videoRefs.clear();
-    this.setState({ joined: false, connections: [] });
+    this.setState({ joined: false, connections: [] as string[] });
+    this.forceUpdate();
   };
 
   MicrophoneButton = () => {
@@ -321,7 +326,9 @@ export default class Home extends React.PureComponent<
                   style={{ backgroundColor: connected ? "#00C853" : "#F50057" }}
                 ></div>
                 <span className="d-none-480">
-                  {connected ? "Conectado" : "Desconectado"}
+                  {connected
+                    ? "Conectado " + `(${connections.length})`
+                    : "Desconectado"}
                 </span>
               </div>
 
@@ -355,21 +362,23 @@ export default class Home extends React.PureComponent<
 
             <div className="flex-1 ma-ver-10" style={{ overflowY: "auto" }}>
               <div id="conections" className="d-flex flex-wrap">
-                {connections.map((socketId) => (
-                  <div key={socketId} className="remote-video">
-                    <video
-                      id={`video-${socketId}`}
-                      ref={(ref) => {
-                        if (!this.videoRefs.has(socketId)) {
-                          this.videoRefs.set(socketId, ref!);
-                        }
-                      }}
-                      autoPlay
-                      muted={false}
-                      playsInline
-                    />
-                  </div>
-                ))}
+                {connections.length > 0 &&
+                  connections.map((socketId) => (
+                    <div key={socketId} className="remote-video">
+                      <video
+                        id={`video-${socketId}`}
+                        ref={(ref) => {
+                          if (!ref) return;
+                          if (!this.videoRefs.has(socketId)) {
+                            this.videoRefs.set(socketId, ref);
+                          }
+                        }}
+                        autoPlay
+                        muted={false}
+                        playsInline
+                      />
+                    </div>
+                  ))}
               </div>
             </div>
 
