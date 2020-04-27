@@ -10,7 +10,6 @@
   -moz-box-shadow: 1px 0px 5px 0px rgba(171, 161, 171, 1);
   box-shadow: 1px 0px 5px 0px rgba(171, 161, 171, 1);
 
-
   &:hover {
     background-color: #cdcdcd;
     transition: ease all 0.5s;
@@ -78,6 +77,10 @@
     -webkit-box-shadow: 1px 0px 5px 0px rgba(171, 161, 171, 1);
     -moz-box-shadow: 1px 0px 5px 0px rgba(171, 161, 171, 1);
     box-shadow: 1px 0px 5px 0px rgba(171, 161, 171, 1);
+
+    @media (min-width: 768px) {
+      border-bottom-left-radius: 20px;
+    }
 
     .section-header {
       z-index: 2;

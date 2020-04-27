@@ -432,7 +432,7 @@ export default class Home extends React.PureComponent<
             />
             {/* CURRENT USER */}
             <div className="d-flex ai-end">
-              <div id="local-container" className="d-none-480">
+              <div id="local-container" className="d-none-768">
                 {/* LOCAL VIDEO */}
                 <video
                   id="local-video"
