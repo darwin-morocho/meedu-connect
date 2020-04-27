@@ -212,7 +212,7 @@ export default class Home extends React.PureComponent<
             size="large"
             className="pa-hor-20 border-radius-zero"
             onClick={() => {
-              navigator.clipboard.writeText(room.name!);
+              navigator.clipboard.writeText(room._id!);
               message.info("Copiado");
               modal.destroy();
             }}
