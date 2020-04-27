@@ -12,9 +12,9 @@ export interface IResponse {
 }
 
 export enum IMessageType {
-  text = 'text',
-  image = 'image',
-  file = 'file',
+  text = "text",
+  image = "image",
+  file = "file",
 }
 
 export interface IMessage {
@@ -39,11 +39,18 @@ export interface ICall {
 export interface UserConnection {
   socketId: string;
   username: string;
+  cameraEnabled: boolean;
+  microphoneEnabled: boolean;
 }
-
 
 export interface Room {
   _id: string;
   name: string;
   connections: UserConnection[];
+}
+
+export interface UserMediaStatus {
+  socketId: string;
+  microphoneEnabled: boolean;
+  cameraEnabled: boolean;
 }

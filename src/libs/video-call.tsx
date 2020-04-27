@@ -3,10 +3,11 @@ import MeeduConnectAPI, {
   // eslint-disable-next-line no-unused-vars
   MeeduConnectAPIResponse,
 } from "../api/meedu-connect-api";
-import { UserConnection, Room } from "../models";
+import { UserConnection, Room, UserMediaStatus } from "../models";
 
 type On = (data?: any) => void;
 type OnJoinedTo = (data: Room) => void;
+type OnUserMediaStatusChanged = (data: UserMediaStatus) => void;
 
 type OnRemoteStream = (data: { socketId: string; stream: MediaStream }) => void;
 
@@ -46,6 +47,7 @@ export class MeeduConnect {
   onRoomNotFound: On | null = null;
   onJoinedTo: OnJoinedTo | null = null;
   onJoined: OnJoined | null = null;
+  onUserMediaStatusChanged: OnUserMediaStatusChanged | null = null;
   connected: boolean = false;
   private meeduAPI!: MeeduConnectAPI;
   private currentRoom: Room | null = null;
@@ -250,6 +252,12 @@ export class MeeduConnect {
         this.connections.delete(socketId);
       }
     });
+
+    this.socket.on("camera-or-microphone-changed", (data: UserMediaStatus) => {
+      if (this.onUserMediaStatusChanged) {
+        this.onUserMediaStatusChanged(data);
+      }
+    });
   }
 
   /**
@@ -267,7 +275,11 @@ export class MeeduConnect {
    * @param roomId
    */
   joinToRoom(roomId: string): void {
-    this.emit("join-to", roomId);
+    this.emit("join-to", {
+      roomId,
+      cameraEnabled: this.cameraEnabled,
+      microphoneEnabled: this.microphoneEnabled,
+    });
   }
 
   /**
@@ -297,8 +309,20 @@ export class MeeduConnect {
    */
   microphone(enabled: boolean): void {
     if (this.localStream) {
+      this.microphoneEnabled = enabled;
       this.localStream.getAudioTracks()[0].enabled = enabled;
+      this.cameraOrMicrophoneChanged();
     }
+  }
+
+  /**
+   * notify to the other user that the camera or micro changes
+   */
+  cameraOrMicrophoneChanged() {
+    this.emit("camera-or-microphone-changed", {
+      cameraEnabled: this.cameraEnabled,
+      microphoneEnabled: this.microphoneEnabled,
+    });
   }
 
   /**
@@ -307,7 +331,9 @@ export class MeeduConnect {
    */
   camera(enabled: boolean): void {
     if (this.localStream) {
+      this.cameraEnabled = enabled;
       this.localStream.getVideoTracks()[0].enabled = enabled;
+      this.cameraOrMicrophoneChanged();
     }
   }
 }

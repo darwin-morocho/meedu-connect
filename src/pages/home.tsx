@@ -11,6 +11,7 @@ import { Dropdown, Button, Menu, message, Modal, Input } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import Loading from "../components/loading";
 import { Room } from "../models";
+import UserMediaStatusView from "../components/user-media-status-view";
 
 export default class Home extends React.PureComponent<
   {
@@ -130,6 +131,20 @@ export default class Home extends React.PureComponent<
             ref!.srcObject = data.stream;
           }
         }, 500);
+      };
+
+      meeduConnect.onUserMediaStatusChanged = (data) => {
+        const { room } = this.state;
+        if (room) {
+          const index = room.connections.findIndex(
+            (item) => item.socketId === data.socketId
+          );
+          if (index !== -1) {
+            room.connections[index].cameraEnabled = data.cameraEnabled;
+            room.connections[index].microphoneEnabled = data.microphoneEnabled;
+            this.setState({ room: { ...room } });
+          }
+        }
       };
     }
   }
@@ -422,6 +437,7 @@ export default class Home extends React.PureComponent<
                         muted={false}
                         playsInline
                       />
+                      <UserMediaStatusView {...item} />
                       <div className="username">{item.username}</div>
                     </div>
                   ))}
