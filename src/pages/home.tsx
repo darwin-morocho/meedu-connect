@@ -21,8 +21,7 @@ export default class Home extends React.PureComponent<
     loading: boolean;
     connecting: boolean;
     connected: boolean;
-    joined: boolean;
-    connections: string[];
+    room: Room | null;
     cameraEnabled: boolean;
     microphoneEnabled: boolean;
   }
@@ -35,9 +34,9 @@ export default class Home extends React.PureComponent<
     connected: false,
     connecting: true,
     joined: false,
+    room: null as Room | null,
     microphoneEnabled: true,
     cameraEnabled: true,
-    connections: [] as string[],
   };
 
   meetCode = "";
@@ -74,34 +73,38 @@ export default class Home extends React.PureComponent<
         console.log("deleted" + socketId, deleted);
 
         console.log("disconnected user jaja:", socketId);
-        const { connections } = this.state;
-        console.log("before", connections);
-        const index = connections.findIndex((item) => item === socketId);
-        console.log("connection index", index);
-        if (index !== -1) {
-          const tmp = [...connections];
-          console.log("after", tmp);
-          tmp.splice(index, 1);
-          this.setState({ connections: tmp });
+        const { room } = this.state;
+        if (room) {
+          const index = room.connections.findIndex(
+            (item) => item.socketId === socketId
+          );
+          console.log("connection index", index);
+          if (index !== -1) {
+            const tmp = room;
+            console.log("after", tmp);
+            tmp.connections.splice(index, 1);
+            this.setState({ room: { ...tmp } });
+          }
         }
       };
 
       meeduConnect.onJoined = (data) => {
         message.info(`Usuario conectado: ${data.username}`);
-        this.setState({
-          joined: true,
-          connections: this.state.connections.concat([data.socketId]),
-        });
+        const { room } = this.state;
+        if (room) {
+          const tmp = room;
+          console.log("after", tmp);
+          tmp.connections.push(data);
+          this.setState({
+            room: { ...tmp },
+          });
+        }
       };
 
       meeduConnect.onJoinedTo = (data) => {
         console.log("Connected users", data.connections);
         message.success(`Conectado a: ${data.name}`);
-        const connections: string[] = [];
-        data.connections.forEach((item) => {
-          connections.push(item.socketId);
-        });
-        this.setState({ joined: true, connections });
+        this.setState({ room: data });
       };
 
       meeduConnect.onRoomNotFound = (roomId: string) => {
@@ -238,8 +241,7 @@ export default class Home extends React.PureComponent<
   leave = () => {
     meeduConnect.leaveRoom();
     this.videoRefs.clear();
-    this.setState({ joined: false, connections: [] as string[] });
-    this.forceUpdate();
+    this.setState({ room: null });
   };
 
   MicrophoneButton = () => {
@@ -304,14 +306,7 @@ export default class Home extends React.PureComponent<
   );
 
   render() {
-    const {
-      connected,
-      joined,
-      connections,
-      loading,
-      cameraEnabled,
-      microphoneEnabled,
-    } = this.state;
+    const { connected, room, loading } = this.state;
     return (
       <Template>
         <div id="main">
@@ -326,9 +321,7 @@ export default class Home extends React.PureComponent<
                   style={{ backgroundColor: connected ? "#00C853" : "#F50057" }}
                 ></div>
                 <span className="d-none-480">
-                  {connected
-                    ? "Conectado " + `(${connections.length})`
-                    : "Desconectado"}
+                  {connected ? "Conectado " : "Desconectado"}
                 </span>
               </div>
 
@@ -349,40 +342,46 @@ export default class Home extends React.PureComponent<
                   shape="round"
                   className="ma-left-20"
                   onClick={
-                    joined
+                    room
                       ? () => this.shareMeet(meeduConnect.room)
                       : this.showCreateMeetModal
                   }
                 >
-                  {joined ? "compartir meet" : "Crear meet"}
+                  {room ? "compartir meet" : "Crear meet"}
                 </Button>
               </div>
             </div>
             {/* END HEADER */}
 
+            {/* START CONNECTIONS VIDEO */}
             <div className="flex-1 ma-ver-10" style={{ overflowY: "auto" }}>
               <div id="conections" className="d-flex flex-wrap">
-                {connections.length > 0 &&
-                  connections.map((socketId) => (
-                    <div key={socketId} className="remote-video">
+                {room &&
+                  room.connections.map((item) => (
+                    <div key={item.socketId} className="remote-video">
                       <video
-                        id={`video-${socketId}`}
+                        id={`video-${item.socketId}`}
                         ref={(ref) => {
                           if (!ref) return;
-                          if (!this.videoRefs.has(socketId)) {
-                            this.videoRefs.set(socketId, ref);
+                          if (!this.videoRefs.has(item.socketId)) {
+                            this.videoRefs.set(item.socketId, ref);
                           }
                         }}
                         autoPlay
                         muted={false}
                         playsInline
                       />
+                      <div className="username">{item.username}</div>
                     </div>
                   ))}
               </div>
             </div>
-
-            <div className="d-flex">
+            {/* END CONNECTIONS VIDEO */}
+            <div
+              style={{ height: 1, width: "100%", backgroundColor: "#ccc" }}
+            />
+            {/* CURRENT USER */}
+            <div className="d-flex ai-end">
               <div id="local-container" className="d-none-480">
                 {/* LOCAL VIDEO */}
                 <video
@@ -395,10 +394,11 @@ export default class Home extends React.PureComponent<
                 {/* END LOCAL VIDEO */}
               </div>
 
-              {!joined && (
+              {/*START NO CONNECTED ACTIONS */}
+              {!room && (
                 <div
                   id="no-joined"
-                  className="flex-1 ma-left-10 pa-hor-10 pa-bottom-10 pa-hor-10-768 d-flex flex-column ai-center jc-end"
+                  className="flex-1 ma-left-10 ma-left-0-480 pa-hor-10 pa-bottom-10 pa-hor-10-768 d-flex flex-column ai-center jc-end"
                 >
                   {/* <Lottie
                     options={{
@@ -419,40 +419,46 @@ export default class Home extends React.PureComponent<
                       onChange={(e) => {
                         this.meetCode = e.target.value;
                       }}
-                      style={{ letterSpacing: 2 }}
-                    />
-                    <button
-                      className="join"
                       style={{ letterSpacing: 1 }}
-                      onClick={this.joinToMeet}
-                    >
+                    />
+                    <button className="join" onClick={this.joinToMeet}>
                       UNIRME
                     </button>
                   </div>
                 </div>
               )}
-            </div>
+              {/*END NO CONNECTED ACTIONS */}
 
-            {/* STSRT ACTIONS */}
-            <div
-              id="call-actions"
-              className={
-                joined ? "w-100 d-flex jc-end ai-center pa-hor-10" : "d-none"
-              }
-            >
-              {this.ScreenShareButton()}
-              <div style={{ width: 15 }} />
-              {this.MicrophoneButton()}
-              <div style={{ width: 15 }} />
-              {this.CameraButton()}
-              <button
-                onClick={this.leave}
-                className="circle-button accent large ma-left-30"
-              >
-                <img src={require("../assets/end-call.svg")} width="40" />
-              </button>
+              {/* STSRT ACTIONS */}
+              {room && (
+                <div
+                  id="call-actions"
+                  className="w-100 pa-hor-10 ma-left-10 ma-bottom-10"
+                >
+                  <h2 className="t-right  ma-bottom-0 lh-110">
+                    Meet: <span className="bold">{room.name}</span>
+                  </h2>
+                  <p className="t-right ma-top-0">
+                    Usuarios conectados ({room.connections.length})
+                  </p>
+                  <div className="d-flex jc-end ai-center ma-top-15">
+                    {this.ScreenShareButton()}
+                    <div style={{ width: 15 }} />
+                    {this.MicrophoneButton()}
+                    <div style={{ width: 15 }} />
+                    {this.CameraButton()}
+                    <button
+                      onClick={this.leave}
+                      className="circle-button accent large ma-left-30"
+                    >
+                      <img src={require("../assets/end-call.svg")} width="40" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              {/* END ACTIONS */}
             </div>
-            {/* END ACTIONS */}
+            {/* END CURRENT USER */}
           </div>
           {/* END LOCAL */}
           <div id="board" className="d-none-768"></div>
