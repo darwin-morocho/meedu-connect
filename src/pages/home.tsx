@@ -297,7 +297,7 @@ export default class Home extends React.PureComponent<
     const { microphoneEnabled } = this.state;
     return (
       <button
-        className="circle-button"
+        className={`circle-button ${microphoneEnabled ? "primary" : "accent"}`}
         onClick={() => {
           meeduConnect.microphone(!microphoneEnabled);
           this.setState({
@@ -311,7 +311,6 @@ export default class Home extends React.PureComponent<
               ? require("../assets/microphone.svg")
               : require("../assets/microphone-off.svg")
           }
-          width="40"
         />
       </button>
     );
@@ -321,7 +320,7 @@ export default class Home extends React.PureComponent<
     const { cameraEnabled } = this.state;
     return (
       <button
-        className="circle-button"
+        className={`circle-button ${cameraEnabled ? "primary" : "accent"}`}
         onClick={() => {
           meeduConnect.camera(!cameraEnabled);
           this.setState({ cameraEnabled: !cameraEnabled });
@@ -333,8 +332,6 @@ export default class Home extends React.PureComponent<
               ? require("../assets/video-camera.svg")
               : require("../assets/video-camera-off.svg")
           }
-          width="40"
-          style={{ color: "#000" }}
         />
       </button>
     );

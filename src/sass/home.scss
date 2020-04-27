@@ -17,6 +17,7 @@
 
   img {
     width: 30px;
+    height: 30px;
   }
 
   &.large {
@@ -131,7 +132,6 @@
         position: relative;
         width: 100px;
         max-width: 100px;
-        margin-top: 10px;
         height: 133px;
         max-height: 133px;
 
@@ -141,12 +141,13 @@
 
         background-color: rgb(205, 205, 205);
         border-radius: 10px;
+        border-bottom-left-radius: 20px;
 
         .user-media-icons {
           position: absolute;
-          bottom: 10px;
-          left: 50%;
-          transform: translateX(-50%);
+          bottom: 5px;
+          left: 5px;
+
           display: flex;
           .media-icon {
             width: 30px;
@@ -160,6 +161,11 @@
             border-radius: 50%;
 
             background-color: #fe065c;
+
+            img {
+              width: 15px;
+              height: 15px;
+            }
 
             &.active {
               background-color: #d2d2d27c;
@@ -179,12 +185,14 @@
           min-height: 100%;
           max-height: 100%;
           max-width: 100%;
+
           width: auto;
           height: auto;
           object-fit: fill;
           background-size: cover;
           overflow: hidden;
           border-radius: 10px;
+          border-bottom-left-radius: 20px;
           -webkit-box-shadow: 6px 7px 11px -5px rgba(0, 0, 0, 0.75);
           -moz-box-shadow: 6px 7px 11px -5px rgba(0, 0, 0, 0.75);
           box-shadow: 6px 7px 11px -5px rgba(0, 0, 0, 0.75);
