@@ -400,7 +400,7 @@ export default class Home extends React.PureComponent<
                   <h3 className="pa-hor-20 t-center">
                     {!room
                       ? "ingresa tu código en la parte de abajo"
-                      : "Aún no hay conectados"}
+                      : "Aún no hay usuarios conectados"}
                   </h3>
                 </div>
               )}
