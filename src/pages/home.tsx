@@ -206,7 +206,13 @@ export default class Home extends React.PureComponent<
       className: "ant-modal-confirm-btns-hide",
       content: (
         <div className="ma-bottom-20 d-flex">
-          <Input className="border-radius-zero" value={room._id} readOnly size="large" addonBefore="ID:" />
+          <Input
+            className="border-radius-zero"
+            value={room._id}
+            readOnly
+            size="large"
+            addonBefore="ID:"
+          />
           <Button
             type="primary"
             size="large"
@@ -345,10 +351,28 @@ export default class Home extends React.PureComponent<
             </div>
             {/* END HEADER */}
 
-            <div className="flex-1"></div>
+            <div className="flex-1 ma-ver-10" style={{ overflowY: "auto" }}>
+              <div id="conections" className="d-flex flex-wrap">
+                {connections.map((socketId) => (
+                  <div key={socketId} className="remote-video">
+                    <video
+                      id={`video-${socketId}`}
+                      ref={(ref) => {
+                        if (!this.videoRefs.has(socketId)) {
+                          this.videoRefs.set(socketId, ref!);
+                        }
+                      }}
+                      autoPlay
+                      muted={false}
+                      playsInline
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
 
             <div className="d-flex">
-              <div id="local-container">
+              <div id="local-container" className="d-none-480">
                 {/* LOCAL VIDEO */}
                 <video
                   id="local-video"
@@ -358,24 +382,6 @@ export default class Home extends React.PureComponent<
                   muted
                 />
                 {/* END LOCAL VIDEO */}
-
-                {/* <div id="conections" className="d-flex flex-wrap">
-                  {connections.map((socketId) => (
-                    <div key={socketId} className="remote-video">
-                      <video
-                        id={`video-${socketId}`}
-                        ref={(ref) => {
-                          if (!this.videoRefs.has(socketId)) {
-                            this.videoRefs.set(socketId, ref!);
-                          }
-                        }}
-                        autoPlay
-                        muted={false}
-                        playsInline
-                      />
-                    </div>
-                  ))}
-                </div> */}
               </div>
 
               {!joined && (
