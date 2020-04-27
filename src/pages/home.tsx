@@ -436,7 +436,7 @@ export default class Home extends React.PureComponent<
                   className="w-100 pa-hor-10 ma-left-10 ma-bottom-10"
                 >
                   <h2 className="t-right  ma-bottom-0 lh-110">
-                    Meet: <span className="bold">{room.name}</span>
+                    <span className="bold">{room.name}</span>
                   </h2>
                   <p className="t-right ma-top-0">
                     Usuarios conectados ({room.connections.length})
