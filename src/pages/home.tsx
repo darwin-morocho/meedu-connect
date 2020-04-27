@@ -32,7 +32,6 @@ export default class Home extends React.PureComponent<
     permissionsOK: false,
     loading: false,
     connected: false,
-
     connecting: true,
     joined: false,
     microphoneEnabled: true,
@@ -86,7 +85,7 @@ export default class Home extends React.PureComponent<
       };
 
       meeduConnect.onJoined = (data) => {
-        message.info(`user joined  ${data.username}`);
+        message.info(`Usuario conectado: ${data.username}`);
         this.setState({
           joined: true,
           connections: this.state.connections.concat([data.socketId]),
@@ -94,19 +93,19 @@ export default class Home extends React.PureComponent<
       };
 
       meeduConnect.onJoinedTo = (data) => {
-        console.log("Connected users", data.connectedUsers);
-        message.info(`joined  to ${data.roomName}`);
+        console.log("Connected users", data.connections);
+        message.success(`Conectado a: ${data.name}`);
         const connections: string[] = [];
-        data.connectedUsers.forEach((item) => {
+        data.connections.forEach((item) => {
           connections.push(item.socketId);
         });
         this.setState({ joined: true, connections });
       };
 
-      meeduConnect.onRoomNotFound = (roomName: string) => {
+      meeduConnect.onRoomNotFound = (roomId: string) => {
         Modal.error({
           title: "Meet no encontrado",
-          content: <div>{roomName}</div>,
+          content: <div>{roomId}</div>,
           okText: "ACEPTAR",
         });
       };
@@ -120,9 +119,51 @@ export default class Home extends React.PureComponent<
     }
   }
 
-  createMeet = async (): Promise<void> => {
+  showCreateMeetModal = () => {
+    let name = "",
+      description = "";
+    Modal.success({
+      width: 600,
+      title: "Compartir Meet",
+      maskClosable: false,
+      okCancel: true,
+      okText: "CREAR",
+      cancelText: "CANCELAR",
+      content: (
+        <div className="ma-bottom-10 ma-top-20">
+          <Input
+            size="large"
+            placeholder="Nombre para el Meet"
+            onChange={(e) => {
+              name = e.target.value;
+            }}
+          />
+          <Input.TextArea
+            className="ma-top-10"
+            onChange={(e) => {
+              description = e.target.value;
+            }}
+            placeholder="Añade una descripción (opcional)"
+          />
+        </div>
+      ),
+      centered: true,
+      onOk: () => {
+        this.createMeet({ name, description });
+      },
+    });
+  };
+
+  createMeet = async (data: {
+    name: string;
+    description: string;
+  }): Promise<void> => {
+    if (data.name.trim().length == 0) {
+      message.error("Nombre para el Meet inválido");
+      return;
+    }
     this.setState({ loading: true });
-    const response = await meeduConnect.createRoom();
+    const response = await meeduConnect.createRoom(data);
     this.setState({ loading: false });
     if (response.status == 200) {
       this.shareMeet(response.data);
@@ -235,6 +276,20 @@ export default class Home extends React.PureComponent<
     );
   };
 
+  ScreenShareButton = () => (
+    <button
+      className="circle-button ma-left-10"
+      onClick={() => {
+        meeduConnect.screenShare();
+      }}
+    >
+      <img
+        src="https://image.flaticon.com/icons/svg/808/808574.svg"
+        width="40"
+      />
+    </button>
+  );
+
   render() {
     const {
       connected,
@@ -251,6 +306,7 @@ export default class Home extends React.PureComponent<
 
           {/* START LOCAL */}
           <div id="local" className="d-flex flex-column">
+            {/* START HEADER */}
             <div className="section-header d-flex jc-space-between ai-center">
               <div id="status">
                 <div
@@ -258,69 +314,72 @@ export default class Home extends React.PureComponent<
                 ></div>
                 <span>{connected ? "Conectado" : "Desconectado"}</span>
               </div>
-              <Dropdown
-                overlay={
-                  <Menu>
-                    <Menu.Item
-                      onClick={
-                        joined
-                          ? () => this.shareMeet(meeduConnect.room)
-                          : this.createMeet
-                      }
-                    >
-                      {joined ? "compartir meet" : "Crear meet"}
-                    </Menu.Item>
-                    {!joined && (
-                      <Menu.Item onClick={this.joinToMeet}>
-                        Unirme a un meet
-                      </Menu.Item>
-                    )}
-                  </Menu>
-                }
-                placement="bottomRight"
-              >
+
+              <div>
                 <Button
-                  type="dashed"
-                  size="large"
                   shape="circle"
-                  icon={<MoreOutlined />}
-                />
-              </Dropdown>
-            </div>
-
-            <div id="local-container">
-              {/* LOCAL VIDEO */}
-              <video
-                id="local-video"
-                ref={(ref) => (this.localVideo = ref)}
-                playsInline
-                autoPlay
-                muted
-              />
-              {/* END LOCAL VIDEO */}
-
-              <div id="conections" className="d-flex flex-wrap">
-                {connections.map((socketId) => (
-                  <div key={socketId} className="remote-video">
-                    <video
-                      id={`video-${socketId}`}
-                      ref={(ref) => {
-                        if (!this.videoRefs.has(socketId)) {
-                          this.videoRefs.set(socketId, ref!);
-                        }
-                      }}
-                      autoPlay
-                      muted={false}
-                      playsInline
+                  size="large"
+                  icon={
+                    <img
+                      width="20"
+                      src="https://image.flaticon.com/icons/svg/271/271221.svg"
                     />
-                  </div>
-                ))}
+                  }
+                />
+                <Button
+                  type="primary"
+                  size="large"
+                  shape="round"
+                  className="ma-left-20"
+                  onClick={
+                    joined
+                      ? () => this.shareMeet(meeduConnect.roomId)
+                      : this.showCreateMeetModal
+                  }
+                >
+                  {joined ? "compartir meet" : "Crear meet"}
+                </Button>
+              </div>
+            </div>
+            {/* END HEADER */}
+
+            <div className="flex-1"></div>
+
+            <div className="d-flex">
+              <div id="local-container">
+                {/* LOCAL VIDEO */}
+                <video
+                  id="local-video"
+                  ref={(ref) => (this.localVideo = ref)}
+                  playsInline
+                  autoPlay
+                  muted
+                />
+                {/* END LOCAL VIDEO */}
+
+                {/* <div id="conections" className="d-flex flex-wrap">
+                  {connections.map((socketId) => (
+                    <div key={socketId} className="remote-video">
+                      <video
+                        id={`video-${socketId}`}
+                        ref={(ref) => {
+                          if (!this.videoRefs.has(socketId)) {
+                            this.videoRefs.set(socketId, ref!);
+                          }
+                        }}
+                        autoPlay
+                        muted={false}
+                        playsInline
+                      />
+                    </div>
+                  ))}
+                </div> */}
               </div>
 
               {!joined && (
                 <div
                   id="no-joined"
-                  className="pa-40 pa-10-768 d-flex flex-column ai-center jc-end"
+                  className="flex-1 ma-left-10 pa-hor-10 pa-bottom-10 pa-hor-10-768 d-flex flex-column ai-center jc-end"
                 >
                   {/* <Lottie
                     options={{
@@ -356,16 +415,23 @@ export default class Home extends React.PureComponent<
             </div>
 
             {/* STSRT ACTIONS */}
-            <div id="call-actions" className={joined ? "" : "d-none"}>
+            <div
+              id="call-actions"
+              className={
+                joined ? "w-100 d-flex jc-end ai-center pa-hor-10" : "d-none"
+              }
+            >
+              {this.ScreenShareButton()}
+              <div style={{ width: 15 }} />
               {this.MicrophoneButton()}
+              <div style={{ width: 15 }} />
+              {this.CameraButton()}
               <button
                 onClick={this.leave}
-                className="circle-button accent large ma-hor-20"
+                className="circle-button accent large ma-left-30"
               >
                 <img src={require("../assets/end-call.svg")} width="40" />
               </button>
-
-              {this.CameraButton()}
             </div>
             {/* END ACTIONS */}
           </div>

@@ -9,11 +9,14 @@ export interface UserConnection {
   username: string;
 }
 
+export interface Room {
+  _id: string;
+  name: string;
+  connections: UserConnection[];
+}
+
 type On = (data?: any) => void;
-type OnJoinedTo = (data: {
-  roomName: string;
-  connectedUsers: UserConnection[];
-}) => void;
+type OnJoinedTo = (data: Room) => void;
 
 type OnRemoteStream = (data: { socketId: string; stream: MediaStream }) => void;
 
@@ -45,6 +48,7 @@ export class MeeduConnect {
   permissionGranted = false;
   private socket: SocketIOClient.Socket | null = null;
   localStream: MediaStream | undefined = undefined;
+  captureStream: MediaStream | undefined = undefined;
   onConnected: On | null = null;
   onConnectError: On | null = null;
   onDisconnected: On | null = null;
@@ -60,7 +64,7 @@ export class MeeduConnect {
   microphoneEnabled: boolean = true;
 
   // get the current room
-  get room(): string | null {
+  get roomId(): string | null {
     return this.currentRoom;
   }
 
@@ -115,6 +119,28 @@ export class MeeduConnect {
       this.connections.get(data.socketId)!.addIceCandidate(data.candidate);
     }
   };
+
+  async screenShare() {
+    try {
+      const mediaDevices = navigator.mediaDevices as any;
+
+      this.captureStream = (await mediaDevices.getDisplayMedia({
+        video: {
+          cursor: "always",
+          aspectRatio: 1.6,
+        },
+        audio: false,
+      })) as MediaStream | undefined;
+      if (this.captureStream) {
+        this.captureStream.getVideoTracks()[0].onended = () => {
+          console.log("finished sharing");
+          this.captureStream = undefined;
+        };
+      }
+    } catch (err) {
+      console.error("Error: " + err);
+    }
+  }
 
   // initialize the library
   async init(options: { stHost: string; token: string }): Promise<void> {
@@ -178,23 +204,20 @@ export class MeeduConnect {
     });
 
     // joined to room
-    this.socket.on(
-      "joined-to",
-      (data: { roomName: string; connectedUsers: UserConnection[] }) => {
-        this.currentRoom = data.roomName;
-        if (this.onJoinedTo) {
-          this.onJoinedTo(data); // notify to the view
-          // creates a peer for each connected user
-          data.connectedUsers.forEach(async (item) => {
-            const peer = await this.getPeerConnecction(item.socketId);
-            const offer = await peer.createOffer();
-            await peer.setLocalDescription(offer);
-            // send the offer to the user
-            this.emit("offer", { socketId: item.socketId, offer });
-          });
-        }
+    this.socket.on("joined-to", (data: Room) => {
+      this.currentRoom = data._id;
+      if (this.onJoinedTo) {
+        this.onJoinedTo(data); // notify to the view
+        // creates a peer for each connected user
+        data.connections.forEach(async (item) => {
+          const peer = await this.getPeerConnecction(item.socketId);
+          const offer = await peer.createOffer();
+          await peer.setLocalDescription(offer);
+          // send the offer to the user
+          this.emit("offer", { socketId: item.socketId, offer });
+        });
       }
-    );
+    });
 
     // a new user was joined to the room
     this.socket.on("joined", (data: any) => {
@@ -221,9 +244,9 @@ export class MeeduConnect {
 
     // ice candidate recived
     this.socket.on("ice-canditate", this.onIceCandidate);
-    this.socket.on("room-not-found", (roomName: string) => {
+    this.socket.on("room-not-found", (roomId: string) => {
       if (this.onRoomNotFound) {
-        this.onRoomNotFound(roomName);
+        this.onRoomNotFound(roomId);
       }
     });
 
@@ -242,16 +265,19 @@ export class MeeduConnect {
   /**
    * create a room
    */
-  async createRoom(): Promise<MeeduConnectAPIResponse> {
-    return await this.meeduAPI.createRoom();
+  async createRoom(data: {
+    name: string;
+    description?: string;
+  }): Promise<MeeduConnectAPIResponse> {
+    return await this.meeduAPI.createRoom(data);
   }
 
   /**
    * just call this method after conecction successfull
-   * @param roomName
+   * @param roomId
    */
-  joinToRoom(roomName: string): void {
-    this.emit("join-to", roomName);
+  joinToRoom(roomId: string): void {
+    this.emit("join-to", roomId);
   }
 
   /**

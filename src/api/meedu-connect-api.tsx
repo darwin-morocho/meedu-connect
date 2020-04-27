@@ -11,12 +11,16 @@ export default class MeeduConnectAPI {
     this.host = host;
   }
 
-  async createRoom(): Promise<MeeduConnectAPIResponse> {
+  async createRoom(data: {
+    name: string;
+    description?: string;
+  }): Promise<MeeduConnectAPIResponse> {
     try {
       const url = `${this.host}/api/v1/rooms/create`;
       const response = await axios({
         url,
         method: "POST",
+        data,
       });
       return { status: 200, data: response.data };
     } catch (e) {
