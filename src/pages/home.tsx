@@ -44,6 +44,13 @@ export default class Home extends React.PureComponent<
   async componentDidMount() {
     const token = await auth.getAccessToken();
     if (token) {
+      // get code from url
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get("code");
+      if (code) {
+        this.meetCode = code;
+      }
+
       await meeduConnect.init({
         stHost: process.env.REACT_APP_MEEDU_CONNECT_HOST!,
         token,
@@ -200,8 +207,10 @@ export default class Home extends React.PureComponent<
     }
     // meeduConnect.room;
 
+    const url = `${window.location.href}?code=${room._id}`;
+
     const modal = Modal.success({
-      width: 600,
+      width: 792,
       title: (
         <p>
           <span className="bold">Meet: </span>
@@ -212,26 +221,50 @@ export default class Home extends React.PureComponent<
       okCancel: false,
       className: "ant-modal-confirm-btns-hide",
       content: (
-        <div className="ma-bottom-20 d-flex">
-          <Input
-            className="border-radius-zero"
-            value={room._id}
-            readOnly
-            size="large"
-            addonBefore="ID:"
-          />
-          <Button
-            type="primary"
-            size="large"
-            className="pa-hor-20 border-radius-zero"
-            onClick={() => {
-              navigator.clipboard.writeText(room._id!);
-              message.info("Copiado");
-              modal.destroy();
-            }}
-          >
-            <CopyOutlined /> Copiar
-          </Button>
+        <div>
+          <div className="d-flex">
+            <Input
+              className="border-radius-zero"
+              value={room._id}
+              readOnly
+              size="large"
+              addonBefore="CÓDIGO:"
+            />
+            <Button
+              type="primary"
+              size="large"
+              className="pa-hor-20 border-radius-zero"
+              onClick={() => {
+                navigator.clipboard.writeText(room._id);
+                message.info("Copiado");
+                modal.destroy();
+              }}
+            >
+              <CopyOutlined /> Copiar
+            </Button>
+          </div>
+
+          <div className="ma-bottom-20  ma-top-10 d-flex">
+            <Input
+              className="border-radius-zero"
+              value={url}
+              readOnly
+              size="large"
+              addonBefore="URL:"
+            />
+            <Button
+              type="primary"
+              size="large"
+              className="pa-hor-20 border-radius-zero"
+              onClick={() => {
+                navigator.clipboard.writeText(url);
+                message.info("Copiado");
+                modal.destroy();
+              }}
+            >
+              <CopyOutlined /> Copiar
+            </Button>
+          </div>
         </div>
       ),
       centered: true,
@@ -355,6 +388,23 @@ export default class Home extends React.PureComponent<
 
             {/* START CONNECTIONS VIDEO */}
             <div className="flex-1 ma-ver-10" style={{ overflowY: "auto" }}>
+              {(!room || room.connections.length == 0) && (
+                <div className="ma-top-30">
+                  <Lottie
+                    options={{
+                      autoplay: true,
+                      animationData: require("../assets/lottie/developer.json"),
+                    }}
+                    height={300}
+                  />
+                  <h3 className="pa-hor-20 t-center">
+                    {!room
+                      ? "ingresa tu código en la parte de abajo"
+                      : "Aún no hay conectados"}
+                  </h3>
+                </div>
+              )}
+
               <div id="conections" className="d-flex flex-wrap">
                 {room &&
                   room.connections.map((item) => (
@@ -400,14 +450,6 @@ export default class Home extends React.PureComponent<
                   id="no-joined"
                   className="flex-1 ma-left-10 ma-left-0-480 pa-hor-10 pa-bottom-10 pa-hor-10-768 d-flex flex-column ai-center jc-end"
                 >
-                  {/* <Lottie
-                    options={{
-                      autoplay: true,
-                      animationData: require("../assets/lottie/developer.json"),
-                    }}
-                    height={300}
-                  /> */}
-
                   <div className="w-100 d-flex ma-bottom-20">
                     {this.MicrophoneButton()}
                     <div style={{ width: 15 }} />
@@ -416,13 +458,14 @@ export default class Home extends React.PureComponent<
                   <div className="d-flex w-100">
                     <input
                       placeholder="Ingresa aquí tu código"
+                      defaultValue={this.meetCode}
                       onChange={(e) => {
                         this.meetCode = e.target.value;
                       }}
                       style={{ letterSpacing: 1 }}
                     />
-                    <button className="join" onClick={this.joinToMeet}>
-                      UNIRME
+                    <button className="join f-30" onClick={this.joinToMeet}>
+                      →
                     </button>
                   </div>
                 </div>

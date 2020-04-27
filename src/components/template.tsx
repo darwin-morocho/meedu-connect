@@ -20,7 +20,7 @@ const Container = styled.div`
   #logo {
   }
   #nav {
-    height: 70px;
+    height: 60px;
     background-color: #f7f7f7;
     width: 100%;
     button {
@@ -66,7 +66,7 @@ export default class Template extends PureComponent<{
             className="d-flex ai-center jc-center pointer"
             onClick={() => (window.location.href = "/home")}
           >
-            <img src={require("../assets/logo2.svg")} height={50} />
+            <img src={require("../assets/logo2.svg")} height={40} />
           </div>
           <div className="d-flex ai-center">
             <Divider type="vertical" className="ma-right-20" />
