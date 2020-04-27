@@ -36,5 +36,14 @@ export interface ICall {
   createdAt: Date;
 }
 
+export interface UserConnection {
+  socketId: string;
+  username: string;
+}
 
 
+export interface Room {
+  _id: string;
+  name: string;
+  connections: UserConnection[];
+}

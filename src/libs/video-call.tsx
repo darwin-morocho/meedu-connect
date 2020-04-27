@@ -3,17 +3,7 @@ import MeeduConnectAPI, {
   // eslint-disable-next-line no-unused-vars
   MeeduConnectAPIResponse,
 } from "../api/meedu-connect-api";
-
-export interface UserConnection {
-  socketId: string;
-  username: string;
-}
-
-export interface Room {
-  _id: string;
-  name: string;
-  connections: UserConnection[];
-}
+import { UserConnection, Room } from "../models";
 
 type On = (data?: any) => void;
 type OnJoinedTo = (data: Room) => void;
@@ -58,13 +48,13 @@ export class MeeduConnect {
   onJoined: OnJoined | null = null;
   connected: boolean = false;
   private meeduAPI!: MeeduConnectAPI;
-  private currentRoom: string | null = null;
+  private currentRoom: Room | null = null;
   onRemoteStream: OnRemoteStream | null = null;
   cameraEnabled: boolean = true;
   microphoneEnabled: boolean = true;
 
   // get the current room
-  get roomId(): string | null {
+  get room(): Room | null {
     return this.currentRoom;
   }
 
@@ -205,7 +195,7 @@ export class MeeduConnect {
 
     // joined to room
     this.socket.on("joined-to", (data: Room) => {
-      this.currentRoom = data._id;
+      this.currentRoom = data;
       if (this.onJoinedTo) {
         this.onJoinedTo(data); // notify to the view
         // creates a peer for each connected user

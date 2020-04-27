@@ -4,12 +4,13 @@ import React from "react";
 import auth from "../libs/auth";
 import Lottie from "react-lottie";
 import Template from "../components/template";
-import meeduConnect, { UserConnection } from "../libs/video-call";
+import meeduConnect from "../libs/video-call";
 import MenuItem from "antd/lib/menu/MenuItem";
 import "../sass/home.scss";
 import { Dropdown, Button, Menu, message, Modal, Input } from "antd";
-import { MoreOutlined } from "@ant-design/icons";
+import { CopyOutlined } from "@ant-design/icons";
 import Loading from "../components/loading";
+import { Room } from "../models";
 
 export default class Home extends React.PureComponent<
   {
@@ -185,7 +186,7 @@ export default class Home extends React.PureComponent<
     }
   };
 
-  shareMeet = async (room: string | null) => {
+  shareMeet = async (room: Room | null) => {
     if (!room) {
       message.error("Meet null");
       return;
@@ -194,29 +195,30 @@ export default class Home extends React.PureComponent<
 
     const modal = Modal.success({
       width: 600,
-      title: "Compartir Meet",
+      title: (
+        <p>
+          <span className="bold">Meet: </span>
+          {room.name}
+        </p>
+      ),
       maskClosable: true,
       okCancel: false,
       className: "ant-modal-confirm-btns-hide",
       content: (
-        <div className="ma-bottom-10">
-          <Input
-            value={room}
-            readOnly
-            addonAfter={
-              <Button
-                type="link"
-                size="small"
-                onClick={() => {
-                  navigator.clipboard.writeText(room!);
-                  message.info("Copiado");
-                  modal.destroy();
-                }}
-              >
-                COPIAR
-              </Button>
-            }
-          />
+        <div className="ma-bottom-20 d-flex">
+          <Input className="border-radius-zero" value={room._id} readOnly size="large" addonBefore="ID:" />
+          <Button
+            type="primary"
+            size="large"
+            className="pa-hor-20 border-radius-zero"
+            onClick={() => {
+              navigator.clipboard.writeText(room.name!);
+              message.info("Copiado");
+              modal.destroy();
+            }}
+          >
+            <CopyOutlined /> Copiar
+          </Button>
         </div>
       ),
       centered: true,
@@ -333,7 +335,7 @@ export default class Home extends React.PureComponent<
                   className="ma-left-20"
                   onClick={
                     joined
-                      ? () => this.shareMeet(meeduConnect.roomId)
+                      ? () => this.shareMeet(meeduConnect.room)
                       : this.showCreateMeetModal
                   }
                 >
