@@ -4,14 +4,40 @@ import React from "react";
 import auth from "../libs/auth";
 import Lottie from "react-lottie";
 import Template from "../components/template";
-import meeduConnect from "../libs/video-call";
+import MeeduConnect from "../libs/video-call";
 import MenuItem from "antd/lib/menu/MenuItem";
 import "../sass/home.scss";
-import { Dropdown, Button, Menu, message, Modal, Input } from "antd";
+import {
+  Dropdown,
+  Button,
+  Menu,
+  message,
+  Modal,
+  Input,
+  notification,
+} from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import Loading from "../components/loading";
 import { Room } from "../models";
 import UserMediaStatusView from "../components/user-media-status-view";
+import MeetingContent from "../components/meeting-content";
+import LocalUser from "../components/local-user";
+
+const config = {
+  iceServers: [
+    { urls: ["stun:stun.l.google.com:19302"] },
+    {
+      urls: ["turn:95.217.132.49:80?transport=udp"],
+      username: "bdb5f88b",
+      credential: "64e9eac4",
+    },
+    {
+      urls: ["turn:95.217.132.49:80?transport=tcp"],
+      username: "bdb5f88b",
+      credential: "64e9eac4",
+    },
+  ],
+};
 
 export default class Home extends React.PureComponent<
   {
@@ -25,11 +51,16 @@ export default class Home extends React.PureComponent<
     room: Room | null;
     cameraEnabled: boolean;
     microphoneEnabled: boolean;
+    username: string;
   }
 > {
-  localVideo: HTMLVideoElement | null = null;
+  private meeduConnect!: MeeduConnect;
+
+  localUser: LocalUser | null = null;
+
   videoRefs = new Map<string, HTMLVideoElement>();
   state = {
+    username: "",
     permissionsOK: false,
     loading: false,
     connected: false,
@@ -42,41 +73,66 @@ export default class Home extends React.PureComponent<
 
   meetCode = "";
 
-  async componentDidMount() {
+  componentDidMount() {
+    // get code from url
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+    if (code) {
+      this.meetCode = code;
+    }
+  }
+
+  init = async () => {
+    this.meeduConnect = new MeeduConnect({ config, username: "Darwin" });
+    this.setState({ loading: true });
     const token = await auth.getAccessToken();
     if (token) {
-      // get code from url
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get("code");
-      if (code) {
-        this.meetCode = code;
-      }
-
-      await meeduConnect.init({
-        stHost: process.env.REACT_APP_MEEDU_CONNECT_HOST!,
+      await this.meeduConnect.init({
+        wsHost: process.env.REACT_APP_MEEDU_CONNECT_HOST!,
         token,
       });
 
-      if (meeduConnect.permissionGranted) {
+      if (this.meeduConnect.permissionGranted) {
         this.setState({ permissionsOK: true });
-        this.localVideo!.srcObject = meeduConnect.localStream!;
       }
 
-      meeduConnect.onConnected = (socketId: string) => {
+      this.meeduConnect.onConnected = (socketId: string) => {
         console.log("socketId:", socketId);
-        this.setState({ connected: true });
+        this.setState({ connected: true, loading: false });
+        setTimeout(() => {
+          if (this.localUser) {
+            this.localUser.localVideo!.srcObject = this.meeduConnect.localStream!;
+          }
+        }, 300);
       };
 
-      meeduConnect.onConnectError = () => {
+      this.meeduConnect.onConnectError = () => {
+        const { loading, connected } = this.state;
+        if (loading && !connected) {
+          this.setState({ loading: false });
+          notification.error({
+            message: "ERROR",
+            description: "No se puedo conectar el servicio de Meedu Connect",
+            placement: "bottomRight",
+          });
+        } else if (connected) {
+          this.setState({ connected: false });
+          notification.error({
+            message: "ERROR",
+            description: "No se puedo conectar el servicio de Meedu Connect",
+            placement: "bottomRight",
+          });
+        }
+
         // message.error("No se pudo conectar al servicio de meedu connect");
       };
 
-      meeduConnect.onDisconnected = () => {
+      this.meeduConnect.onDisconnected = () => {
         console.log("disconnected");
         this.setState({ connected: false });
       };
 
-      meeduConnect.onDisconnectedUser = (socketId: string) => {
+      this.meeduConnect.onDisconnectedUser = (socketId: string) => {
         const deleted = this.videoRefs.delete(socketId);
         console.log("deleted" + socketId, deleted);
 
@@ -96,7 +152,7 @@ export default class Home extends React.PureComponent<
         }
       };
 
-      meeduConnect.onJoined = (data) => {
+      this.meeduConnect.onJoined = (data) => {
         message.info(`Usuario conectado: ${data.username}`);
         const { room } = this.state;
         if (room) {
@@ -109,13 +165,13 @@ export default class Home extends React.PureComponent<
         }
       };
 
-      meeduConnect.onJoinedTo = (data) => {
+      this.meeduConnect.onJoinedTo = (data) => {
         console.log("Connected users", data.connections);
         message.success(`Conectado a: ${data.name}`);
         this.setState({ room: data });
       };
 
-      meeduConnect.onRoomNotFound = (roomId: string) => {
+      this.meeduConnect.onRoomNotFound = (roomId: string) => {
         Modal.error({
           title: "Meet no encontrado",
           content: <div>{roomId}</div>,
@@ -123,8 +179,7 @@ export default class Home extends React.PureComponent<
         });
       };
 
-      meeduConnect.onRemoteStream = (data) => {
-        console.log("refs", this.videoRefs);
+      this.meeduConnect.onRemoteStream = (data) => {
         setTimeout(() => {
           if (this.videoRefs.has(data.socketId)) {
             const ref = this.videoRefs.get(data.socketId);
@@ -133,7 +188,7 @@ export default class Home extends React.PureComponent<
         }, 500);
       };
 
-      meeduConnect.onUserMediaStatusChanged = (data) => {
+      this.meeduConnect.onUserMediaStatusChanged = (data) => {
         const { room } = this.state;
         if (room) {
           const index = room.connections.findIndex(
@@ -147,7 +202,7 @@ export default class Home extends React.PureComponent<
         }
       };
     }
-  }
+  };
 
   showCreateMeetModal = () => {
     let name = "",
@@ -193,7 +248,7 @@ export default class Home extends React.PureComponent<
       return;
     }
     this.setState({ loading: true });
-    const response = await meeduConnect.createRoom(data);
+    const response = await this.meeduConnect.createRoom(data);
     this.setState({ loading: false });
     if (response.status == 200) {
       this.shareMeet(response.data);
@@ -203,12 +258,12 @@ export default class Home extends React.PureComponent<
   };
 
   joinToMeet = () => {
-    if (!meeduConnect.connected) {
+    if (!this.meeduConnect.connected) {
       message.error("No estas conectado al servicio de meedu connect");
       return;
     }
     if (this.meetCode.trim().length > 0) {
-      meeduConnect.joinToRoom(this.meetCode);
+      this.meeduConnect.joinToRoom(this.meetCode);
       message.info("Uniendose al Meet");
     } else {
       message.info("Código inválido");
@@ -220,7 +275,7 @@ export default class Home extends React.PureComponent<
       message.error("Meet null");
       return;
     }
-    // meeduConnect.room;
+    // this.meeduConnect.room;
 
     const url = `${window.location.href}?code=${room._id}`;
 
@@ -287,239 +342,129 @@ export default class Home extends React.PureComponent<
   };
 
   leave = () => {
-    meeduConnect.leaveRoom();
+    this.meeduConnect.leaveRoom();
     this.videoRefs.clear();
     this.meetCode = "";
     this.setState({ room: null });
   };
 
-  MicrophoneButton = () => {
-    const { microphoneEnabled } = this.state;
-    return (
-      <button
-        className={`circle-button ${microphoneEnabled ? "primary" : "accent"}`}
-        onClick={() => {
-          meeduConnect.microphone(!microphoneEnabled);
-          this.setState({
-            microphoneEnabled: !microphoneEnabled,
-          });
-        }}
-      >
-        <img
-          src={
-            microphoneEnabled
-              ? require("../assets/microphone.svg")
-              : require("../assets/microphone-off.svg")
-          }
-        />
-      </button>
-    );
-  };
-
-  CameraButton = () => {
-    const { cameraEnabled } = this.state;
-    return (
-      <button
-        className={`circle-button ${cameraEnabled ? "primary" : "accent"}`}
-        onClick={() => {
-          meeduConnect.camera(!cameraEnabled);
-          this.setState({ cameraEnabled: !cameraEnabled });
-        }}
-      >
-        <img
-          src={
-            cameraEnabled
-              ? require("../assets/video-camera.svg")
-              : require("../assets/video-camera-off.svg")
-          }
-        />
-      </button>
-    );
-  };
-
-  ScreenShareButton = () => (
-    <button
-      className="circle-button ma-left-10"
-      onClick={() => {
-        meeduConnect.screenShare();
-      }}
-    >
-      <img
-        src="https://image.flaticon.com/icons/svg/808/808574.svg"
-        width="40"
-      />
-    </button>
-  );
-
   render() {
-    const { connected, room, loading } = this.state;
+    const { connected, room, loading, username } = this.state;
+
     return (
       <Template>
-        <div id="main">
-          <div id="chat" className="d-none-768"></div>
-
-          {/* START LOCAL */}
-          <div id="local" className="d-flex flex-column">
-            {/* START HEADER */}
-            <div className="section-header d-flex jc-space-between ai-center">
-              <div id="status">
-                <div
-                  style={{ backgroundColor: connected ? "#00C853" : "#F50057" }}
-                ></div>
-                <span className="d-none-480">
-                  {connected ? "Conectado " : "Desconectado"}
-                </span>
-              </div>
-
-              <div>
-                <Button
-                  shape="circle"
-                  size="large"
-                  icon={
-                    <img
-                      width="20"
-                      src="https://image.flaticon.com/icons/svg/271/271221.svg"
-                    />
-                  }
+        {!connected && (
+          <div id="username-container">
+            <div>
+              <Lottie
+                options={{
+                  autoplay: true,
+                  animationData: require("../assets/lottie/developer.json"),
+                }}
+                width={400}
+                height={300}
+              />
+              <div className="d-flex">
+                <input
+                  onChange={(e) => {
+                    this.setState({
+                      username: e.target.value,
+                    });
+                  }}
+                  placeholder="Tu nombre de usuario"
                 />
-                <Button
-                  type="primary"
-                  size="large"
-                  shape="round"
-                  className="ma-left-20"
-                  onClick={
-                    room
-                      ? () => this.shareMeet(meeduConnect.room)
-                      : this.showCreateMeetModal
-                  }
+                <button
+                  onClick={() => {
+                    if (username.trim().length == 0) {
+                      notification.error({
+                        message: "ERROR",
+                        description: "Nombre de usuario inválido",
+                        placement: "bottomRight",
+                      });
+                      return;
+                    }
+                    this.init();
+                  }}
                 >
-                  {room ? "compartir meet" : "Crear meet"}
-                </Button>
+                  CONECTARME
+                </button>
               </div>
             </div>
-            {/* END HEADER */}
-
-            {/* START CONNECTIONS VIDEO */}
-            <div className="flex-1 ma-ver-10" style={{ overflowY: "auto" }}>
-              {(!room || room.connections.length == 0) && (
-                <div className="ma-top-30">
-                  <Lottie
-                    options={{
-                      autoplay: true,
-                      animationData: require("../assets/lottie/developer.json"),
-                    }}
-                    height={300}
-                  />
-                  <h3 className="pa-hor-20 t-center">
-                    {!room
-                      ? "ingresa tu código en la parte de abajo"
-                      : "Aún no hay usuarios conectados"}
-                  </h3>
-                </div>
-              )}
-
-              <div id="conections" className="d-flex flex-wrap">
-                {room &&
-                  room.connections.map((item) => (
-                    <div key={item.socketId} className="remote-video">
-                      <video
-                        id={`video-${item.socketId}`}
-                        ref={(ref) => {
-                          if (!ref) return;
-                          if (!this.videoRefs.has(item.socketId)) {
-                            this.videoRefs.set(item.socketId, ref);
-                          }
-                        }}
-                        autoPlay
-                        muted={false}
-                        playsInline
-                      />
-                      <UserMediaStatusView {...item} />
-                      <div className="username">{item.username}</div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-            {/* END CONNECTIONS VIDEO */}
-            <div
-              style={{ height: 1, width: "100%", backgroundColor: "#ccc" }}
-            />
-            {/* CURRENT USER */}
-            <div className="d-flex ai-end">
-              <div id="local-container" className="d-none-768">
-                {/* LOCAL VIDEO */}
-                <video
-                  id="local-video"
-                  ref={(ref) => (this.localVideo = ref)}
-                  playsInline
-                  autoPlay
-                  muted
-                />
-                {/* END LOCAL VIDEO */}
-              </div>
-
-              {/*START NO CONNECTED ACTIONS */}
-              {!room && (
-                <div
-                  id="no-joined"
-                  className="flex-1 ma-left-10 ma-left-0-480 pa-hor-10 pa-bottom-10 pa-hor-10-768 d-flex flex-column ai-center jc-end"
-                >
-                  <div className="w-100 d-flex ma-bottom-20">
-                    {this.MicrophoneButton()}
-                    <div style={{ width: 15 }} />
-                    {this.CameraButton()}
-                  </div>
-                  <div className="d-flex w-100">
-                    <input
-                      placeholder="Ingresa aquí tu código"
-                      defaultValue={this.meetCode}
-                      onChange={(e) => {
-                        this.meetCode = e.target.value;
-                      }}
-                      style={{ letterSpacing: 1 }}
-                    />
-                    <button className="join f-30" onClick={this.joinToMeet}>
-                      →
-                    </button>
-                  </div>
-                </div>
-              )}
-              {/*END NO CONNECTED ACTIONS */}
-
-              {/* STSRT ACTIONS */}
-              {room && (
-                <div
-                  id="call-actions"
-                  className="w-100 pa-hor-10 ma-left-10 ma-bottom-10"
-                >
-                  <h2 className="t-right  ma-bottom-0 lh-110">
-                    <span className="bold">{room.name}</span>
-                  </h2>
-                  <p className="t-right ma-top-0">
-                    Usuarios conectados ({room.connections.length})
-                  </p>
-                  <div className="d-flex jc-end ai-center ma-top-15">
-                    {this.ScreenShareButton()}
-                    <div style={{ width: 15 }} />
-                    {this.MicrophoneButton()}
-                    <div style={{ width: 15 }} />
-                    {this.CameraButton()}
-                    <button
-                      onClick={this.leave}
-                      className="circle-button accent large ma-left-30"
-                    >
-                      <img src={require("../assets/end-call.svg")} width="40" />
-                    </button>
-                  </div>
-                </div>
-              )}
-              {/* END ACTIONS */}
-            </div>
-            {/* END CURRENT USER */}
           </div>
-          {/* END LOCAL */}
-          <div id="board" className="d-none-768"></div>
-        </div>
+        )}
+        {connected && (
+          <div id="main">
+            <div id="chat" className="d-none-768"></div>
+
+            {/* START LOCAL */}
+            <div id="local" className="d-flex flex-column">
+              {/* START HEADER */}
+              <div className="section-header d-flex jc-space-between ai-center">
+                <div id="status">
+                  <div
+                    style={{
+                      backgroundColor: connected ? "#00C853" : "#F50057",
+                    }}
+                  ></div>
+                  <span className="d-none-480">
+                    {connected ? "Conectado " : "Desconectado"}
+                  </span>
+                </div>
+
+                <div>
+                  <Button
+                    shape="circle"
+                    size="large"
+                    icon={
+                      <img
+                        width="20"
+                        src="https://image.flaticon.com/icons/svg/271/271221.svg"
+                      />
+                    }
+                  />
+                  <Button
+                    type="primary"
+                    size="large"
+                    shape="round"
+                    className="ma-left-20"
+                    onClick={
+                      room
+                        ? () => this.shareMeet(this.meeduConnect.room)
+                        : this.showCreateMeetModal
+                    }
+                  >
+                    {room ? "compartir meet" : "Crear meet"}
+                  </Button>
+                </div>
+              </div>
+              {/* END HEADER */}
+
+              {/* START CONNECTIONS VIDEO */}
+              <MeetingContent
+                room={room}
+                meeduConnect={this.meeduConnect}
+                videoRefs={this.videoRefs}
+                meetCode={this.meetCode}
+              />
+              {/* END CONNECTIONS VIDEO */}
+              <div
+                style={{ height: 1, width: "100%", backgroundColor: "#ccc" }}
+              />
+              {/* CURRENT USER */}
+              <LocalUser
+                ref={(ref) => {
+                  this.localUser = ref;
+                }}
+                room={room}
+                meeduConnect={this.meeduConnect}
+                onLeave={this.leave}
+              />
+              {/* END CURRENT USER */}
+            </div>
+            {/* END LOCAL */}
+            <div id="board" className="d-none-768"></div>
+          </div>
+        )}
         <Loading open={loading} />
       </Template>
     );

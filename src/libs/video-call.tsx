@@ -18,23 +18,8 @@ interface OnIceCandidate {
   candidate: RTCIceCandidate;
 }
 
-const config = {
-  iceServers: [
-    { urls: ["stun:stun.l.google.com:19302"] },
-    {
-      urls: ["turn:95.217.132.49:80?transport=udp"],
-      username: "bdb5f88b",
-      credential: "64e9eac4",
-    },
-    {
-      urls: ["turn:95.217.132.49:80?transport=tcp"],
-      username: "bdb5f88b",
-      credential: "64e9eac4",
-    },
-  ],
-};
-
-export class MeeduConnect {
+export default class MeeduConnect {
+  private config!: RTCConfiguration;
   private connections = new Map<string, RTCPeerConnection>();
   permissionGranted = false;
   private socket: SocketIOClient.Socket | null = null;
@@ -54,19 +39,23 @@ export class MeeduConnect {
   onRemoteStream: OnRemoteStream | null = null;
   cameraEnabled: boolean = true;
   microphoneEnabled: boolean = true;
+  private username!: string;
 
   // get the current room
   get room(): Room | null {
     return this.currentRoom;
   }
 
-  constructor() {}
+  constructor(data: { config: RTCConfiguration; username: string }) {
+    this.config = data.config;
+    this.username = data.username;
+  }
 
   async getPeerConnecction(socketId: string): Promise<RTCPeerConnection> {
     if (this.connections.has(socketId)) {
       return this.connections.get(socketId)!;
     }
-    const peer = new RTCPeerConnection(config);
+    const peer = new RTCPeerConnection(this.config);
 
     peer.onicecandidate = (e) => {
       if (e.candidate) {
@@ -135,8 +124,8 @@ export class MeeduConnect {
   }
 
   // initialize the library
-  async init(options: { stHost: string; token: string }): Promise<void> {
-    this.meeduAPI = new MeeduConnectAPI(options.stHost);
+  async init(options: { wsHost: string; token: string }): Promise<void> {
+    this.meeduAPI = new MeeduConnectAPI(options.wsHost);
     const mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: true,
       video: { width: 480, height: 640 },
@@ -145,7 +134,7 @@ export class MeeduConnect {
       // if was successfull
       this.permissionGranted = true;
       this.localStream = mediaStream;
-      this.connect(options.stHost, options.token); // connect to streaming websocket
+      this.connect(options.wsHost, options.token); // connect to streaming websocket
     } else {
       this.permissionGranted = false;
     }
@@ -160,7 +149,7 @@ export class MeeduConnect {
     this.socket = io.connect(host, {
       query: {
         token,
-        username: `user-${Date.now()}`,
+        username: this.username,
       },
       transports: ["websocket"],
       upgrade: false,
@@ -275,11 +264,13 @@ export class MeeduConnect {
    * @param roomId
    */
   joinToRoom(roomId: string): void {
-    this.emit("join-to", {
+    const data = {
       roomId,
       cameraEnabled: this.cameraEnabled,
       microphoneEnabled: this.microphoneEnabled,
-    });
+    };
+    console.log("join-to data", data);
+    this.emit("join-to", data);
   }
 
   /**
@@ -319,10 +310,15 @@ export class MeeduConnect {
    * notify to the other user that the camera or micro changes
    */
   cameraOrMicrophoneChanged() {
-    this.emit("camera-or-microphone-changed", {
+    const data = {
       cameraEnabled: this.cameraEnabled,
       microphoneEnabled: this.microphoneEnabled,
-    });
+    };
+
+    if (this.room) {
+      console.log("data", data);
+      this.emit("camera-or-microphone-changed", data);
+    }
   }
 
   /**
@@ -337,5 +333,3 @@ export class MeeduConnect {
     }
   }
 }
-
-export default new MeeduConnect();
