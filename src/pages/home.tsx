@@ -52,6 +52,7 @@ export default class Home extends React.PureComponent<
     cameraEnabled: boolean;
     microphoneEnabled: boolean;
     username: string;
+    remoteScreen: boolean;
   }
 > {
   private meeduConnect!: MeeduConnect;
@@ -69,10 +70,12 @@ export default class Home extends React.PureComponent<
     room: null as Room | null,
     microphoneEnabled: true,
     cameraEnabled: true,
+    remoteScreen: false,
   };
 
   meetCode = "";
   wasJoined = false;
+  screenShraingRef: HTMLVideoElement | null = null;
 
   componentDidMount() {
     // get code from url
@@ -204,6 +207,7 @@ export default class Home extends React.PureComponent<
         });
       };
 
+      // when we have a remote stream
       this.meeduConnect.onRemoteStream = (data) => {
         setTimeout(() => {
           if (this.videoRefs.has(data.socketId)) {
@@ -213,6 +217,7 @@ export default class Home extends React.PureComponent<
         }, 500);
       };
 
+      // when a user anabled or disabled the camera or micrphone
       this.meeduConnect.onUserMediaStatusChanged = (data) => {
         const { room } = this.state;
         if (room) {
@@ -224,6 +229,27 @@ export default class Home extends React.PureComponent<
             room.connections[index].microphoneEnabled = data.microphoneEnabled;
             this.setState({ room: { ...room } });
           }
+        }
+      };
+
+      this.meeduConnect.onLocalScreenStream = (stream) => {
+        if (this.screenShraingRef && stream) {
+          console.log("showing local screen", stream);
+          this.screenShraingRef.srcObject = stream;
+          this.screenShraingRef.play();
+        } else {
+          console.log("local screenShraingRef is null");
+        }
+      };
+
+      this.meeduConnect.onScreenSharingStream = (stream) => {
+        if (this.screenShraingRef) {
+          console.log("showing remote screen", stream);
+          this.screenShraingRef.srcObject = stream;
+          this.screenShraingRef.play();
+          this.setState({ remoteScreen: stream !== null });
+        } else {
+          console.log("screenShraingRef is null");
         }
       };
     }
@@ -366,6 +392,18 @@ export default class Home extends React.PureComponent<
     });
   };
 
+  join = () => {
+    if (this.state.username.trim().length == 0) {
+      notification.error({
+        message: "ERROR",
+        description: "Nombre de usuario inválido",
+        placement: "bottomRight",
+      });
+      return;
+    }
+    this.init();
+  };
+
   leave = () => {
     this.meeduConnect.leaveRoom();
     this.videoRefs.clear();
@@ -374,7 +412,7 @@ export default class Home extends React.PureComponent<
   };
 
   render() {
-    const { connected, room, loading, username } = this.state;
+    const { connected, room, loading, username, remoteScreen } = this.state;
 
     return (
       <Template>
@@ -397,22 +435,14 @@ export default class Home extends React.PureComponent<
                         username: e.target.value,
                       });
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        this.join();
+                      }
+                    }}
                     placeholder="Tu nombre de usuario"
                   />
-                  <button
-                    className="join"
-                    onClick={() => {
-                      if (username.trim().length == 0) {
-                        notification.error({
-                          message: "ERROR",
-                          description: "Nombre de usuario inválido",
-                          placement: "bottomRight",
-                        });
-                        return;
-                      }
-                      this.init();
-                    }}
-                  >
+                  <button className="join" onClick={this.join}>
                     CONECTARME
                   </button>
                 </div>
@@ -513,7 +543,18 @@ export default class Home extends React.PureComponent<
               {/* END CURRENT USER */}
             </div>
             {/* END LOCAL */}
-            <div id="board" className="d-none-768"></div>
+            <div id="board" className={`d-none-768  `}>
+              <video
+                ref={(ref) => {
+                  this.screenShraingRef = ref;
+                }}
+                muted
+                autoPlay
+                playsInline
+                controls
+                className={remoteScreen ? "" : "d-none"}
+              />
+            </div>
           </div>
         )}
         <Loading open={loading} />

@@ -310,6 +310,15 @@
 
   #board {
     flex: 1;
+    padding: 10px;
+    video{
+      max-width: 100%;
+    }
+
+    #remote-screen-prview{
+      width: 100%;
+      height: 400px;
+    }
   }
 }
 

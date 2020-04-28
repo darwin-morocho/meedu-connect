@@ -1,4 +1,5 @@
 import io from "socket.io-client";
+import Peer from "simple-peer";
 import MeeduConnectAPI, {
   // eslint-disable-next-line no-unused-vars
   MeeduConnectAPIResponse,
@@ -40,6 +41,10 @@ export default class MeeduConnect {
   cameraEnabled: boolean = true;
   microphoneEnabled: boolean = true;
   private username!: string;
+  onScreenSharingStream: On | null = null;
+  onLocalScreenStream: On | null = null;
+  private broadcast: Broadcast | null = null;
+  private isScreenSharing = false;
 
   // get the current room
   get room(): Room | null {
@@ -107,15 +112,28 @@ export default class MeeduConnect {
 
       this.captureStream = (await mediaDevices.getDisplayMedia({
         video: {
+          mediaSource: "screen",
           cursor: "always",
-          aspectRatio: 1.6,
+          width: { max: "1920" },
+          height: { max: "1080" },
+          frameRate: { max: "10" },
         },
         audio: false,
       })) as MediaStream | undefined;
       if (this.captureStream) {
+        this.isScreenSharing = true;
+
+        for (let key of Array.from(this.connections.keys())) {
+          this.broadcast!.share(key, this.captureStream);
+        }
+
         this.captureStream.getVideoTracks()[0].onended = () => {
-          console.log("finished sharing");
+          this.isScreenSharing = false;
           this.captureStream = undefined;
+          console.log("finished screen sharing");
+          if (this.broadcast) {
+            this.broadcast.stop();
+          }
         };
       }
     } catch (err) {
@@ -155,6 +173,18 @@ export default class MeeduConnect {
       upgrade: false,
     });
 
+    this.broadcast = new Broadcast(this.socket!, this.config);
+    this.broadcast.onRemoteStream = (stream) => {
+      if (this.onScreenSharingStream) {
+        this.onScreenSharingStream(stream); // send the screen capture stream
+      }
+    };
+    this.broadcast.onStopped = () => {
+      if (this.onScreenSharingStream) {
+        this.onScreenSharingStream(null); // the remote screen sharing has been stopped
+      }
+    };
+
     // connected to the websocket
     this.socket.on("connected", (socketId: string) => {
       console.log("connected");
@@ -169,6 +199,7 @@ export default class MeeduConnect {
       this.connected = false;
       if (this.onDisconnected) {
         this.onDisconnected();
+        this.broadcast!.stop();
       }
     });
 
@@ -204,6 +235,9 @@ export default class MeeduConnect {
     this.socket.on("joined", (data: any) => {
       if (this.onJoined) {
         this.onJoined(data);
+        if (this.isScreenSharing) {
+          this.broadcast!.share(data.socketId, this.captureStream!);
+        }
       }
     });
 
@@ -225,6 +259,7 @@ export default class MeeduConnect {
 
     // ice candidate recived
     this.socket.on("ice-canditate", this.onIceCandidate);
+
     this.socket.on("room-not-found", (roomId: string) => {
       if (this.onRoomNotFound) {
         this.onRoomNotFound(roomId);
@@ -283,6 +318,7 @@ export default class MeeduConnect {
       peer.close();
     });
     this.connections.clear();
+    this.broadcast!.stop();
   }
 
   /**
@@ -331,5 +367,115 @@ export default class MeeduConnect {
       this.localStream.getVideoTracks()[0].enabled = enabled;
       this.cameraOrMicrophoneChanged();
     }
+  }
+}
+
+type OnStream = (stream: MediaStream) => void;
+class Broadcast {
+  private config!: RTCConfiguration;
+  private socket!: SocketIOClient.Socket;
+
+  private peers = new Map<string, Peer.Instance>();
+  private peer: Peer.Instance | null = null; // peer to use when you recive a remote screen share
+  onRemoteStream: null | OnStream = null;
+  onStopped: null | On = null;
+  private iAmSharing = false;
+
+  constructor(socket: SocketIOClient.Socket, config: RTCConfiguration) {
+    this.socket = socket;
+    this.config = config;
+
+    // whe have a remote screen sharing offer
+    this.socket.on(
+      "remote-screen-offer",
+      async (data: { socketId: string; peerData: any }) => {
+        // if (this.peer) return; // if we have a current screen sharing
+        this.log("remote-screen-offer", data);
+
+        this.iAmSharing = false;
+
+        if (!this.peer) {
+          this.peer = new Peer({ initiator: false, config: this.config });
+        }
+        this.peer.signal(data.peerData); //
+        this.peer.on("signal", (peerData) => {
+          // peerData could be answer (RTCSessionDescription) or ice candidate
+          this.log("answer", peerData);
+          this.socket.emit("screen-sharing-answer", {
+            socketId: data.socketId,
+            peerData: peerData,
+          });
+        });
+        this.peer.on("stream", (stream) => {
+          console.log("broadcast got stream");
+          if (this.onRemoteStream) {
+            this.onRemoteStream(stream);
+          }
+        });
+      }
+    );
+
+    //we have a remote screen answer or candidate
+    this.socket.on(
+      "remote-screen-answer",
+      async (data: { socketId: string; peerData: any }) => {
+        console.log("we get the answer", data.socketId, data.peerData);
+        if (this.peers.has(data.socketId)) {
+          console.log("setting answer from ", data.socketId);
+          // data.peerData could be answer or ice candidate
+          const peer = this.peers.get(data.socketId)!;
+          peer.signal(data.peerData);
+        }
+      }
+    );
+
+    this.socket.on("screen-sharing-stopped", () => {
+      if (this.peer) {
+        this.peer.destroy();
+      }
+      if (this.onStopped) {
+        this.onStopped();
+      }
+    });
+  }
+
+  async share(socketId: string, stream: MediaStream): Promise<boolean> {
+    this.iAmSharing = true;
+    if (this.peers.has(socketId)) {
+      return true;
+    }
+    console.log("sharing screen to ", socketId);
+
+    const peer = new Peer({
+      initiator: true,
+      config: this.config,
+      trickle: false,
+    });
+    peer.on("error", (err) => console.log("error", err));
+    peer.addStream(stream);
+    peer.on("signal", (data) => {
+      console.log("sending offer to ", socketId, data);
+      this.socket.emit("screen-sharing-offer", { socketId, peerData: data });
+    });
+    this.peers.set(socketId, peer);
+    return true;
+  }
+
+  // destroy the current peer
+  stop() {
+    if (this.iAmSharing) {
+      this.peers.forEach((value) => {
+        value.destroy();
+      });
+      this.peers.clear();
+      this.socket.emit("screen-sharing-stopped");
+    }
+    if (this.peer) {
+      this.peer.destroy();
+    }
+  }
+
+  private log(event: string = "", data: any) {
+    console.log(`broadcast ${event}:`, data);
   }
 }
