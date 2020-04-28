@@ -42,7 +42,7 @@ export default class Meeting extends React.PureComponent<{
                 autoplay: true,
                 animationData: require("../assets/lottie/developer.json"),
               }}
-              height={300}
+              height={200}
             />
             <h3 className="pa-hor-20 t-center">
               {!room
