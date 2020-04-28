@@ -72,6 +72,7 @@ export default class Home extends React.PureComponent<
   };
 
   meetCode = "";
+  wasJoined = false;
 
   componentDidMount() {
     // get code from url
@@ -82,8 +83,19 @@ export default class Home extends React.PureComponent<
     }
   }
 
+  setLocalStream = () => {
+    setTimeout(() => {
+      if (this.localUser) {
+        this.localUser.localVideo!.srcObject = this.meeduConnect.localStream!;
+      }
+    }, 300);
+  };
+
   init = async () => {
-    this.meeduConnect = new MeeduConnect({ config, username: "Darwin" });
+    this.meeduConnect = new MeeduConnect({
+      config,
+      username: this.state.username,
+    });
     this.setState({ loading: true });
     const token = await auth.getAccessToken();
     if (token) {
@@ -97,13 +109,17 @@ export default class Home extends React.PureComponent<
       }
 
       this.meeduConnect.onConnected = (socketId: string) => {
-        console.log("socketId:", socketId);
-        this.setState({ connected: true, loading: false });
-        setTimeout(() => {
-          if (this.localUser) {
-            this.localUser.localVideo!.srcObject = this.meeduConnect.localStream!;
-          }
-        }, 300);
+        const { room } = this.state;
+        if (!room) {
+          // if the user is not connected yet to one room
+          console.log("socketId:", socketId);
+          this.setState({ connected: true, loading: false });
+          this.setLocalStream();
+        } else {
+          this.meeduConnect.joinToRoom(room._id);
+          this.setState({ connected: true });
+          this.setLocalStream();
+        }
       };
 
       this.meeduConnect.onConnectError = () => {
@@ -112,7 +128,8 @@ export default class Home extends React.PureComponent<
           this.setState({ loading: false });
           notification.error({
             message: "ERROR",
-            description: "No se puedo conectar el servicio de Meedu Connect",
+            description:
+              "No se puedo conectar el servicio de Meedu Connect. Revisa tu conexíon e intenta nuevamente.",
             placement: "bottomRight",
           });
         } else if (connected) {
@@ -129,7 +146,15 @@ export default class Home extends React.PureComponent<
 
       this.meeduConnect.onDisconnected = () => {
         console.log("disconnected");
-        this.setState({ connected: false });
+        this.meeduConnect.leaveRoom();
+        this.videoRefs.clear();
+        const tmp = this.state.room;
+        if (tmp) {
+          tmp.connections = [];
+          this.setState({ connected: false, room: { ...tmp } });
+        } else {
+          this.setState({ connected: false });
+        }
       };
 
       this.meeduConnect.onDisconnectedUser = (socketId: string) => {
@@ -355,43 +380,69 @@ export default class Home extends React.PureComponent<
       <Template>
         {!connected && (
           <div id="username-container">
-            <div>
-              <Lottie
-                options={{
-                  autoplay: true,
-                  animationData: require("../assets/lottie/developer.json"),
-                }}
-                width={400}
-                height={300}
-              />
-              <div className="d-flex">
-                <input
-                  onChange={(e) => {
-                    this.setState({
-                      username: e.target.value,
-                    });
+            {!room && (
+              <div>
+                <Lottie
+                  options={{
+                    autoplay: true,
+                    animationData: require("../assets/lottie/developer.json"),
                   }}
-                  placeholder="Tu nombre de usuario"
+                  width={400}
+                  height={300}
                 />
-                <button
-                  onClick={() => {
-                    if (username.trim().length == 0) {
-                      notification.error({
-                        message: "ERROR",
-                        description: "Nombre de usuario inválido",
-                        placement: "bottomRight",
+                <div className="d-flex">
+                  <input
+                    onChange={(e) => {
+                      this.setState({
+                        username: e.target.value,
                       });
-                      return;
-                    }
-                    this.init();
-                  }}
-                >
-                  CONECTARME
-                </button>
+                    }}
+                    placeholder="Tu nombre de usuario"
+                  />
+                  <button
+                    className="join"
+                    onClick={() => {
+                      if (username.trim().length == 0) {
+                        notification.error({
+                          message: "ERROR",
+                          description: "Nombre de usuario inválido",
+                          placement: "bottomRight",
+                        });
+                        return;
+                      }
+                      this.init();
+                    }}
+                  >
+                    CONECTARME
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
+            {room && (
+              <div className="t-center">
+                <Lottie
+                  options={{
+                    autoplay: true,
+                    animationData: require("../assets/lottie/no-internet-animation.json"),
+                  }}
+                  width={400}
+                  height={300}
+                />
+                <h2 className="f-20 bold">Se perdio la conexión</h2>
+                <p>
+                  Te uniras automaticamente al meet en un momento.
+                  <br />
+                  Si el problema persiste revisa tu conexión.
+                </p>
+                <br />
+                <Button type="danger" size="large" onClick={this.leave}>
+                  ABANDONAR EL MEET
+                </Button>
+              </div>
+            )}
           </div>
         )}
+
         {connected && (
           <div id="main">
             <div id="chat" className="d-none-768"></div>
