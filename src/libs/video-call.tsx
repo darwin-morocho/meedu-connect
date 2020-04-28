@@ -419,9 +419,7 @@ class Broadcast {
     this.socket.on(
       "remote-screen-answer",
       async (data: { socketId: string; peerData: any }) => {
-        console.log("we get the answer", data.socketId, data.peerData);
         if (this.peers.has(data.socketId)) {
-          console.log("setting answer from ", data.socketId);
           // data.peerData could be answer or ice candidate
           const peer = this.peers.get(data.socketId)!;
           peer.signal(data.peerData);
@@ -444,7 +442,6 @@ class Broadcast {
     if (this.peers.has(socketId)) {
       return true;
     }
-    console.log("sharing screen to ", socketId);
 
     const peer = new Peer({
       initiator: true,
@@ -454,7 +451,6 @@ class Broadcast {
     peer.on("error", (err) => console.log("error", err));
     peer.addStream(stream);
     peer.on("signal", (data) => {
-      console.log("sending offer to ", socketId, data);
       this.socket.emit("screen-sharing-offer", { socketId, peerData: data });
     });
     this.peers.set(socketId, peer);
@@ -476,6 +472,6 @@ class Broadcast {
   }
 
   private log(event: string = "", data: any) {
-    console.log(`broadcast ${event}:`, data);
+    // console.log(`broadcast ${event}:`, data);
   }
 }
