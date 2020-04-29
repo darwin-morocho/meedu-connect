@@ -6,6 +6,7 @@ export default class LocalUser extends React.PureComponent<{
   meeduConnect: MeeduConnect;
   room: Room | null;
   onLeave: () => void;
+  shareScreenEnabled: boolean;
 }> {
   state = {
     microphoneEnabled: true,
@@ -39,6 +40,7 @@ export default class LocalUser extends React.PureComponent<{
 
   CameraButton = () => {
     const { cameraEnabled } = this.state;
+
     return (
       <button
         className={`circle-button ${cameraEnabled ? "primary" : "accent"}`}
@@ -73,7 +75,7 @@ export default class LocalUser extends React.PureComponent<{
   );
 
   render() {
-    const { room, onLeave } = this.props;
+    const { room, onLeave, shareScreenEnabled } = this.props;
     return (
       <div className="d-flex ai-end">
         <div id="local-container" className="d-none-768">
@@ -116,7 +118,7 @@ export default class LocalUser extends React.PureComponent<{
               Usuarios conectados ({room.connections.length})
             </p>
             <div className="d-flex jc-end ai-center ma-top-15">
-              {this.ScreenShareButton()}
+              {shareScreenEnabled && this.ScreenShareButton()}
               <div style={{ width: 15 }} />
               {this.MicrophoneButton()}
               <div style={{ width: 15 }} />

@@ -52,7 +52,8 @@ export default class Home extends React.PureComponent<
     cameraEnabled: boolean;
     microphoneEnabled: boolean;
     username: string;
-    remoteScreen: boolean;
+    hasScreenSharing: boolean;
+    iAmSharingScreen: boolean;
   }
 > {
   private meeduConnect!: MeeduConnect;
@@ -70,7 +71,8 @@ export default class Home extends React.PureComponent<
     room: null as Room | null,
     microphoneEnabled: true,
     cameraEnabled: true,
-    remoteScreen: false,
+    hasScreenSharing: false,
+    iAmSharingScreen: false,
   };
 
   meetCode = "";
@@ -236,21 +238,31 @@ export default class Home extends React.PureComponent<
         if (this.screenShraingRef && stream) {
           console.log("showing local screen", stream);
           this.screenShraingRef.srcObject = stream;
-          this.screenShraingRef.play();
         } else {
           console.log("local screenShraingRef is null");
         }
       };
 
+      // we have a remote screen sharing
       this.meeduConnect.onScreenSharingStream = (stream) => {
-        if (this.screenShraingRef) {
+        if (this.screenShraingRef && stream) {
           console.log("showing remote screen", stream);
           this.screenShraingRef.srcObject = stream;
-          this.screenShraingRef.play();
-          this.setState({ remoteScreen: stream !== null });
+          this.setState({ hasScreenSharing: true });
         } else {
           console.log("screenShraingRef is null");
         }
+      };
+
+      this.meeduConnect.onScreenSharingChanged = (data: {
+        sharing: boolean;
+        iAmSharing: boolean;
+      }) => {
+        console.log("onScreenSharingChanged", data);
+        this.setState({
+          hasScreenSharing: data.sharing,
+          iAmSharingScreen: data.iAmSharing,
+        });
       };
     }
   };
@@ -408,11 +420,22 @@ export default class Home extends React.PureComponent<
     this.meeduConnect.leaveRoom();
     this.videoRefs.clear();
     this.meetCode = "";
-    this.setState({ room: null });
+    this.setState({
+      room: null,
+      hasScreenSharing: false,
+      iAmSharingScreen: false,
+    });
   };
 
   render() {
-    const { connected, room, loading, username, remoteScreen } = this.state;
+    const {
+      connected,
+      room,
+      loading,
+      username,
+      hasScreenSharing,
+      iAmSharingScreen,
+    } = this.state;
 
     return (
       <Template>
@@ -537,6 +560,7 @@ export default class Home extends React.PureComponent<
                   this.localUser = ref;
                 }}
                 room={room}
+                shareScreenEnabled={!hasScreenSharing}
                 meeduConnect={this.meeduConnect}
                 onLeave={this.leave}
               />
@@ -552,7 +576,9 @@ export default class Home extends React.PureComponent<
                 autoPlay
                 playsInline
                 controls
-                className={remoteScreen ? "" : "d-none"}
+                className={
+                  hasScreenSharing && !iAmSharingScreen ? "" : "d-none"
+                }
               />
             </div>
           </div>

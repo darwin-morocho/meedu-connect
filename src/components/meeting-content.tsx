@@ -56,6 +56,11 @@ export default class Meeting extends React.PureComponent<{
                   onChange={(e) => {
                     this.meetCode = e.target.value;
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      this.joinToMeet();
+                    }
+                  }}
                   style={{ letterSpacing: 1 }}
                 />
                 <button className="join f-20" onClick={this.joinToMeet}>
