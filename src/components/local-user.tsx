@@ -1,6 +1,8 @@
 import React from "react";
 import MeeduConnect from "../libs/video-call";
 import { Room } from "../models";
+import CameraButton from "./CameraButton";
+import MicrophoneButton from "./ MicrophoneButton";
 
 export default class LocalUser extends React.PureComponent<{
   meeduConnect: MeeduConnect;
@@ -14,51 +16,6 @@ export default class LocalUser extends React.PureComponent<{
   };
 
   localVideo: HTMLVideoElement | null = null;
-
-  MicrophoneButton = () => {
-    const { microphoneEnabled } = this.state;
-    return (
-      <button
-        className={`circle-button ${microphoneEnabled ? "primary" : "accent"}`}
-        onClick={() => {
-          this.props.meeduConnect.microphone(!microphoneEnabled);
-          this.setState({
-            microphoneEnabled: !microphoneEnabled,
-          });
-        }}
-      >
-        <img
-          src={
-            microphoneEnabled
-              ? require("../assets/microphone.svg")
-              : require("../assets/microphone-off.svg")
-          }
-        />
-      </button>
-    );
-  };
-
-  CameraButton = () => {
-    const { cameraEnabled } = this.state;
-
-    return (
-      <button
-        className={`circle-button ${cameraEnabled ? "primary" : "accent"}`}
-        onClick={() => {
-          this.props.meeduConnect.camera(!cameraEnabled);
-          this.setState({ cameraEnabled: !cameraEnabled });
-        }}
-      >
-        <img
-          src={
-            cameraEnabled
-              ? require("../assets/video-camera.svg")
-              : require("../assets/video-camera-off.svg")
-          }
-        />
-      </button>
-    );
-  };
 
   ScreenShareButton = () => (
     <button
@@ -75,9 +32,9 @@ export default class LocalUser extends React.PureComponent<{
   );
 
   render() {
-    const { room, onLeave, shareScreenEnabled } = this.props;
+    const { room, onLeave, shareScreenEnabled, meeduConnect } = this.props;
     return (
-      <div className="d-flex ai-end">
+      <div className={room ? `d-flex ai-end ` : "d-none"}>
         <div id="local-container" className="d-none-768">
           {/* LOCAL VIDEO */}
           <video
@@ -91,7 +48,7 @@ export default class LocalUser extends React.PureComponent<{
         </div>
 
         {/*START NO CONNECTED ACTIONS */}
-        {!room && (
+        {/* {!room && (
           <div
             id="no-joined"
             className="flex-1 ma-left-10 ma-left-0-480 pa-hor-10 pa-bottom-10 pa-hor-10-768 d-flex flex-column ai-center jc-end"
@@ -102,7 +59,7 @@ export default class LocalUser extends React.PureComponent<{
               {this.CameraButton()}
             </div>
           </div>
-        )}
+        )} */}
         {/*END NO CONNECTED ACTIONS */}
 
         {/* STSRT ACTIONS */}
@@ -120,9 +77,9 @@ export default class LocalUser extends React.PureComponent<{
             <div className="d-flex jc-end ai-center ma-top-15">
               {shareScreenEnabled && this.ScreenShareButton()}
               <div style={{ width: 15 }} />
-              {this.MicrophoneButton()}
+              <MicrophoneButton meeduConnect={meeduConnect} />
               <div style={{ width: 15 }} />
-              {this.CameraButton()}
+              <CameraButton meeduConnect={meeduConnect} />
               <button
                 onClick={onLeave}
                 className="circle-button accent large ma-left-30"

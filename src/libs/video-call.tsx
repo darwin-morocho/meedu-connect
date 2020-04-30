@@ -376,10 +376,26 @@ export default class MeeduConnect {
    * enable or disable the camera
    * @param enabled
    */
-  camera(enabled: boolean): void {
+  async camera(enabled: boolean): Promise<void> {
     if (this.localStream) {
       this.cameraEnabled = enabled;
       this.localStream.getVideoTracks()[0].enabled = enabled;
+      // if (!enabled) {//turn on the camera
+      //   this.localStream.getVideoTracks()[0].stop();
+      //   this.localStream.getVideoTracks().forEach((track) => {
+      //     this.localStream!.removeTrack(track);
+      //   });
+      // } else {
+      //   const stream = await navigator.mediaDevices.getUserMedia({
+      //     audio: false,
+      //     video: { width: 480, height: 640 },
+      //   });
+      //   if (stream && this.localStream) {
+      //     stream.getVideoTracks().forEach((track) => {
+      //       this.localStream!.addTrack(track);
+      //     });
+      //   }
+      // }
       this.cameraOrMicrophoneChanged();
     }
   }

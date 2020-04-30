@@ -8,6 +8,7 @@ import {
   Avatar,
   Popover,
   Divider,
+  Tooltip,
 } from "antd";
 import { CaretDownOutlined } from "@ant-design/icons";
 
@@ -16,7 +17,9 @@ const { Header, Content, Footer } = Layout;
 
 const Container = styled.div`
   overflow: hidden;
+  display: flex;
   height: 100vh;
+  width: 100%;
   #logo {
   }
   #nav {
@@ -55,51 +58,35 @@ export default class Template extends PureComponent<{
     window.location.href = "/login";
   };
 
-  render() {
-    const { children } = this.props;
-    const user = auth.user;
-    return (
-      <Container>
-        <div id="nav" className="d-flex jc-space-between ai-center pa-hor-20">
-          <div
-            id="logo"
-            className="d-flex ai-center jc-center pointer"
-            onClick={() => (window.location.href = "/home")}
-          >
-            <img src={require("../assets/logo2.svg")} height={40} />
-          </div>
-          <div className="d-flex ai-center">
-            <Divider type="vertical" className="ma-right-20" />
-            <Popover
-              placement="bottomRight"
-              content={
-                <div style={{ width: 170 }}>
-                  <div className="menu-btn" onClick={this.onLogOut}>
-                    Cerrar Sesion
-                  </div>
-                </div>
-              }
-            >
-              <div className="pointer d-flex ai-center">
-                {user && (
+  /*
+   {user && (
                   <Avatar size="large" style={{ backgroundColor: "#0099cc" }}>
                     {user.name.charAt(0)}
                     {user.lastName.charAt(0)}
                   </Avatar>
                 )}
-                {/* {user && (
-                <div className="c-white ma-left-5 d-inline-block lh-100 t-center">
-                  {user.name}
-                  <br />
-                  {user?.lastName}
-                </div>
-              )} */}
-                <CaretDownOutlined className="ma-left-10" />
-              </div>
-            </Popover>
-          </div>
+  */
+
+  render() {
+    const { children } = this.props;
+    const user = auth.user;
+    return (
+      <Container>
+        <div id="menu">
+          <div></div>
+          <Tooltip title="Cerrar sesión" placement="right">
+            <div
+              className="menu-button"
+              onClick={() => {
+                localStorage.clear();
+                window.location.href = "/login";
+              }}
+            >
+              <img src="https://image.flaticon.com/icons/svg/1828/1828427.svg" />
+            </div>
+          </Tooltip>
         </div>
-        {children}
+        <div id="content">{children}</div>
       </Container>
     );
   }

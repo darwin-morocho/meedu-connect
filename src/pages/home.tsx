@@ -22,6 +22,9 @@ import { Room } from "../models";
 import UserMediaStatusView from "../components/user-media-status-view";
 import MeetingContent from "../components/meeting-content";
 import LocalUser from "../components/local-user";
+import MicrophoneButton from "../components/ MicrophoneButton";
+import CameraButton from "../components/CameraButton";
+import NoJoined from "../components/no-joined";
 
 const config = {
   iceServers: [
@@ -51,7 +54,7 @@ export default class Home extends React.PureComponent<
     room: Room | null;
     cameraEnabled: boolean;
     microphoneEnabled: boolean;
-    username: string;
+
     hasScreenSharing: boolean;
     iAmSharingScreen: boolean;
   }
@@ -62,7 +65,6 @@ export default class Home extends React.PureComponent<
 
   videoRefs = new Map<string, HTMLVideoElement>();
   state = {
-    username: "",
     permissionsOK: false,
     loading: false,
     connected: false,
@@ -74,10 +76,11 @@ export default class Home extends React.PureComponent<
     hasScreenSharing: false,
     iAmSharingScreen: false,
   };
-
+  username = "";
   meetCode = "";
   wasJoined = false;
   screenShraingRef: HTMLVideoElement | null = null;
+  noJoinedRef: NoJoined | null = null;
 
   componentDidMount() {
     // get code from url
@@ -86,12 +89,18 @@ export default class Home extends React.PureComponent<
     if (code) {
       this.meetCode = code;
     }
+
+    const username = localStorage.getItem("username");
+    if (username) {
+      this.username = username;
+    }
   }
 
   setLocalStream = () => {
     setTimeout(() => {
       if (this.localUser) {
         this.localUser.localVideo!.srcObject = this.meeduConnect.localStream!;
+        this.noJoinedRef!.noJoinedVideoRef!.srcObject = this.meeduConnect.localStream!;
       }
     }, 300);
   };
@@ -99,7 +108,7 @@ export default class Home extends React.PureComponent<
   init = async () => {
     this.meeduConnect = new MeeduConnect({
       config,
-      username: this.state.username,
+      username: this.username,
     });
     this.setState({ loading: true });
     const token = await auth.getAccessToken();
@@ -405,7 +414,7 @@ export default class Home extends React.PureComponent<
   };
 
   join = () => {
-    if (this.state.username.trim().length == 0) {
+    if (this.username.trim().length == 0) {
       notification.error({
         message: "ERROR",
         description: "Nombre de usuario inválido",
@@ -413,6 +422,7 @@ export default class Home extends React.PureComponent<
       });
       return;
     }
+    localStorage.setItem("username", this.username);
     this.init();
   };
 
@@ -432,7 +442,6 @@ export default class Home extends React.PureComponent<
       connected,
       room,
       loading,
-      username,
       hasScreenSharing,
       iAmSharingScreen,
     } = this.state;
@@ -453,10 +462,9 @@ export default class Home extends React.PureComponent<
                 />
                 <div className="d-flex">
                   <input
+                    defaultValue={localStorage.getItem("username") || ""}
                     onChange={(e) => {
-                      this.setState({
-                        username: e.target.value,
-                      });
+                      this.username = e.target.value;
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -498,8 +506,6 @@ export default class Home extends React.PureComponent<
 
         {connected && (
           <div id="main">
-            <div id="chat" className="d-none-768"></div>
-
             {/* START LOCAL */}
             <div id="local" className="d-flex flex-column">
               {/* START HEADER */}
@@ -551,9 +557,6 @@ export default class Home extends React.PureComponent<
                 meetCode={this.meetCode}
               />
               {/* END CONNECTIONS VIDEO */}
-              <div
-                style={{ height: 1, width: "100%", backgroundColor: "#ccc" }}
-              />
               {/* CURRENT USER */}
               <LocalUser
                 ref={(ref) => {
@@ -568,6 +571,14 @@ export default class Home extends React.PureComponent<
             </div>
             {/* END LOCAL */}
             <div id="board" className={`d-none-768  `}>
+              <NoJoined
+                ref={(ref) => {
+                  this.noJoinedRef = ref;
+                }}
+                meeduConnect={this.meeduConnect}
+                room={room}
+              />
+
               <video
                 ref={(ref) => {
                   this.screenShraingRef = ref;

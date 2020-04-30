@@ -34,9 +34,12 @@ export default class Meeting extends React.PureComponent<{
   render() {
     const { room, videoRefs } = this.props;
     return (
-      <div className="flex-1 ma-ver-10" style={{ overflowY: "auto" }}>
+      <div
+        className="flex-1  d-flex ai-center jc-center"
+        style={{ overflowY: "auto" }}
+      >
         {(!room || room.connections.length == 0) && (
-          <div className="ma-top-30">
+          <div className="pre-joined">
             <Lottie
               options={{
                 autoplay: true,
