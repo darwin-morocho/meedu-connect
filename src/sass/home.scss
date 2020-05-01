@@ -168,6 +168,11 @@
     &:focus {
       outline: none;
     }
+    @media (max-width: 768px) {
+      font-size: 14px;
+      padding-left: 10px;
+      padding-right: 10px;
+    }
   }
 }
 
@@ -254,7 +259,7 @@
     }
 
     @media (max-width: 768px) {
-      flex: 1;
+      flex: 2;
       border-radius: 0px;
     }
 
@@ -517,6 +522,7 @@
 
     @media (max-width: 768px) {
       padding: 0px;
+      flex: 1;
     }
 
     #remote-screen-prview {

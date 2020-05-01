@@ -72,7 +72,7 @@ export default class LocalUser extends React.PureComponent<{
         {room && (
           <div
             id="call-actions"
-            className="w-100 pa-hor-10 ma-left-10 ma-bottom-10"
+            className="w-100 pa-hor-10 ma-left-10 pa-left-0-480 ma-left-0-480 ma-bottom-10"
           >
             <h2 className="t-right  ma-bottom-0 lh-110">
               <span className="bold">{room.name}</span>

@@ -77,8 +77,8 @@ export default class Home extends React.PureComponent<{
                     autoplay: true,
                     animationData: require("../assets/lottie/developer.json"),
                   }}
-                  width={400}
-                  height={300}
+                  width={200}
+                  height={250}
                 />
                 <div className="d-flex">
                   <input
@@ -106,8 +106,8 @@ export default class Home extends React.PureComponent<{
                     autoplay: true,
                     animationData: require("../assets/lottie/no-internet-animation.json"),
                   }}
-                  width={400}
-                  height={300}
+                  width={200}
+                  height={250}
                 />
                 <h2 className="f-20 bold">Se perdio la conexión</h2>
                 <p>
