@@ -4,27 +4,28 @@ import UserMediaStatusView from "./user-media-status-view";
 import Lottie from "react-lottie";
 import MeeduConnect from "../libs/video-call";
 import { message } from "antd";
+import { inject, observer } from "mobx-react";
+import { HomeStore } from "../mobx/home-state";
 
+@inject("homeStore")
+@observer
 export default class Meeting extends React.PureComponent<{
-  room: Room | null;
-  meeduConnect: MeeduConnect;
-  videoRefs: Map<string, HTMLVideoElement>;
-  meetCode: string;
+  homeStore?: HomeStore;
 }> {
   meetCode = "";
 
   constructor(props: any) {
     super(props);
-    this.meetCode = this.props.meetCode;
+    this.meetCode = this.props.homeStore!.meetCode;
   }
 
   joinToMeet = () => {
-    if (!this.props.meeduConnect.connected) {
+    if (!this.props.homeStore!.meeduConnect.connected) {
       message.error("No estas conectado al servicio de meedu connect");
       return;
     }
     if (this.meetCode.trim().length > 0) {
-      this.props.meeduConnect.joinToRoom(this.meetCode);
+      this.props.homeStore!.meeduConnect.joinToRoom(this.meetCode);
       message.info("Uniendose al Meet");
     } else {
       message.info("Código inválido");
@@ -32,10 +33,19 @@ export default class Meeting extends React.PureComponent<{
   };
 
   render() {
-    const { room, videoRefs } = this.props;
+    const {
+      room,
+      videoRefs,
+      hasScreenSharing,
+      iAmSharingScreen,
+    } = this.props.homeStore!;
     return (
       <div
-        className="flex-1  d-flex ai-center jc-center"
+        className={`flex-1 ${
+          !room || room.connections.length == 0
+            ? "  d-flex ai-center jc-center"
+            : ""
+        }`}
         style={{ overflowY: "auto" }}
       >
         {(!room || room.connections.length == 0) && (
@@ -74,7 +84,37 @@ export default class Meeting extends React.PureComponent<{
           </div>
         )}
 
-        <div id="conections" className="d-flex flex-wrap">
+        <div
+          id="screen-shared"
+          className={hasScreenSharing && !iAmSharingScreen ? "" : "d-none"}
+        >
+          <video
+            ref={(ref) => {
+              this.props.homeStore!.screenShraingRef = ref;
+            }}
+            muted
+            autoPlay
+            playsInline
+          />
+
+          <button
+            className="circle-button"
+            onClick={() => {
+              this.props.homeStore!.screenSharedToFullScreen();
+            }}
+          >
+            <img src={require("../assets/full-screen.svg")} alt="" />
+          </button>
+        </div>
+
+        <div
+          id="conections"
+          className={
+            !hasScreenSharing || iAmSharingScreen
+              ? "d-flex flex-wrap"
+              : "d-none"
+          }
+        >
           {room &&
             room.connections.map((item) => (
               <div key={item.socketId} className="remote-video">

@@ -3,12 +3,13 @@ import MeeduConnect from "../libs/video-call";
 import { Room } from "../models";
 import CameraButton from "./CameraButton";
 import MicrophoneButton from "./ MicrophoneButton";
+import { inject, observer } from "mobx-react";
+import { HomeStore } from "../mobx/home-state";
 
+@inject("homeStore")
+@observer
 export default class LocalUser extends React.PureComponent<{
-  meeduConnect: MeeduConnect;
-  room: Room | null;
-  onLeave: () => void;
-  shareScreenEnabled: boolean;
+  homeStore?: HomeStore;
 }> {
   state = {
     microphoneEnabled: true,
@@ -21,7 +22,7 @@ export default class LocalUser extends React.PureComponent<{
     <button
       className="circle-button ma-left-10"
       onClick={() => {
-        this.props.meeduConnect.screenShare();
+        this.props.homeStore!.meeduConnect.screenShare();
       }}
     >
       <img
@@ -32,7 +33,12 @@ export default class LocalUser extends React.PureComponent<{
   );
 
   render() {
-    const { room, onLeave, shareScreenEnabled, meeduConnect } = this.props;
+    const {
+      room,
+      leave,
+      hasScreenSharing,
+      meeduConnect,
+    } = this.props.homeStore!;
     return (
       <div className={room ? `d-flex ai-end ` : "d-none"}>
         <div id="local-container" className="d-none-768">
@@ -75,13 +81,13 @@ export default class LocalUser extends React.PureComponent<{
               Usuarios conectados ({room.connections.length})
             </p>
             <div className="d-flex jc-end ai-center ma-top-15">
-              {shareScreenEnabled && this.ScreenShareButton()}
+              {!hasScreenSharing && this.ScreenShareButton()}
               <div style={{ width: 15 }} />
-              <MicrophoneButton meeduConnect={meeduConnect} />
+              <MicrophoneButton />
               <div style={{ width: 15 }} />
-              <CameraButton meeduConnect={meeduConnect} />
+              <CameraButton />
               <button
-                onClick={onLeave}
+                onClick={leave}
                 className="circle-button accent large ma-left-30"
               >
                 <img src={require("../assets/end-call.svg")} width="40" />

@@ -1,28 +1,26 @@
 import React from "react";
 import MeeduConnect from "../libs/video-call";
+import { HomeStore } from "../mobx/home-state";
+import { inject, observer } from "mobx-react";
 
-export default class CameraButton extends React.PureComponent<
-  {
-    meeduConnect: MeeduConnect;
-  },
-  { cameraEnabled: boolean }
-> {
+@inject("homeStore")
+@observer
+export default class CameraButton extends React.PureComponent<{
+  homeStore?: HomeStore;
+}> {
   constructor(props: any) {
     super(props);
-    this.state = {
-      cameraEnabled: this.props.meeduConnect.cameraEnabled,
-    };
   }
 
   render() {
-    const { cameraEnabled } = this.state;
+    const { cameraEnabled, meeduConnect } = this.props.homeStore!;
 
     return (
       <button
         className={`circle-button ${cameraEnabled ? "primary" : "accent"}`}
         onClick={() => {
-          this.props.meeduConnect.camera(!cameraEnabled);
-          this.setState({ cameraEnabled: !cameraEnabled });
+          meeduConnect.camera(!cameraEnabled);
+          this.props.homeStore!.cameraEnabled = !cameraEnabled;
         }}
       >
         <img

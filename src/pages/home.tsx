@@ -1,30 +1,17 @@
 /* eslint-disable no-unused-vars */
 import "webrtc-adapter";
 import React from "react";
-import auth from "../libs/auth";
 import Lottie from "react-lottie";
 import Template from "../components/template";
-import MeeduConnect from "../libs/video-call";
-import MenuItem from "antd/lib/menu/MenuItem";
+import { inject, observer } from "mobx-react";
+
 import "../sass/home.scss";
-import {
-  Dropdown,
-  Button,
-  Menu,
-  message,
-  Modal,
-  Input,
-  notification,
-} from "antd";
-import { CopyOutlined } from "@ant-design/icons";
+import { Button } from "antd";
 import Loading from "../components/loading";
-import { Room } from "../models";
-import UserMediaStatusView from "../components/user-media-status-view";
 import MeetingContent from "../components/meeting-content";
 import LocalUser from "../components/local-user";
-import MicrophoneButton from "../components/ MicrophoneButton";
-import CameraButton from "../components/CameraButton";
 import NoJoined from "../components/no-joined";
+import { HomeStore } from "../mobx/home-state";
 
 const config = {
   iceServers: [
@@ -42,399 +29,32 @@ const config = {
   ],
 };
 
-export default class Home extends React.PureComponent<
-  {
-    history: any;
-  },
-  {
-    permissionsOK: boolean;
-    loading: boolean;
-    connecting: boolean;
-    connected: boolean;
-    room: Room | null;
-    cameraEnabled: boolean;
-    microphoneEnabled: boolean;
-
-    hasScreenSharing: boolean;
-    iAmSharingScreen: boolean;
-  }
-> {
-  private meeduConnect!: MeeduConnect;
-
-  localUser: LocalUser | null = null;
-
-  videoRefs = new Map<string, HTMLVideoElement>();
-  state = {
-    permissionsOK: false,
-    loading: false,
-    connected: false,
-    connecting: true,
-    joined: false,
-    room: null as Room | null,
-    microphoneEnabled: true,
-    cameraEnabled: true,
-    hasScreenSharing: false,
-    iAmSharingScreen: false,
-  };
-  username = "";
-  meetCode = "";
-  wasJoined = false;
-  screenShraingRef: HTMLVideoElement | null = null;
-  noJoinedRef: NoJoined | null = null;
-
+@inject("homeStore")
+@observer
+export default class Home extends React.PureComponent<{
+  homeStore: HomeStore;
+  history: any;
+}> {
   componentDidMount() {
     // get code from url
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get("code");
     if (code) {
-      this.meetCode = code;
+      this.props.homeStore.meetCode = code;
     }
 
     const username = localStorage.getItem("username");
     if (username) {
-      this.username = username;
+      this.props.homeStore.username = username;
     }
   }
 
-  setLocalStream = () => {
-    setTimeout(() => {
-      if (this.localUser) {
-        this.localUser.localVideo!.srcObject = this.meeduConnect.localStream!;
-        this.noJoinedRef!.noJoinedVideoRef!.srcObject = this.meeduConnect.localStream!;
-      }
-    }, 300);
-  };
-
-  init = async () => {
-    this.meeduConnect = new MeeduConnect({
-      config,
-      username: this.username,
-    });
-    this.setState({ loading: true });
-    const token = await auth.getAccessToken();
-    if (token) {
-      await this.meeduConnect.init({
-        wsHost: process.env.REACT_APP_MEEDU_CONNECT_HOST!,
-        token,
-      });
-
-      if (this.meeduConnect.permissionGranted) {
-        this.setState({ permissionsOK: true });
-      }
-
-      this.meeduConnect.onConnected = (socketId: string) => {
-        const { room } = this.state;
-        if (!room) {
-          // if the user is not connected yet to one room
-          console.log("socketId:", socketId);
-          this.setState({ connected: true, loading: false });
-          this.setLocalStream();
-        } else {
-          this.meeduConnect.joinToRoom(room._id);
-          this.setState({ connected: true });
-          this.setLocalStream();
-        }
-      };
-
-      this.meeduConnect.onConnectError = () => {
-        const { loading, connected } = this.state;
-        if (loading && !connected) {
-          this.setState({ loading: false });
-          notification.error({
-            message: "ERROR",
-            description:
-              "No se puedo conectar el servicio de Meedu Connect. Revisa tu conexíon e intenta nuevamente.",
-            placement: "bottomRight",
-          });
-        } else if (connected) {
-          this.setState({ connected: false });
-          notification.error({
-            message: "ERROR",
-            description: "No se puedo conectar el servicio de Meedu Connect",
-            placement: "bottomRight",
-          });
-        }
-
-        // message.error("No se pudo conectar al servicio de meedu connect");
-      };
-
-      this.meeduConnect.onDisconnected = () => {
-        console.log("disconnected");
-        this.meeduConnect.leaveRoom();
-        this.videoRefs.clear();
-        const tmp = this.state.room;
-        if (tmp) {
-          tmp.connections = [];
-          this.setState({ connected: false, room: { ...tmp } });
-        } else {
-          this.setState({ connected: false });
-        }
-      };
-
-      this.meeduConnect.onDisconnectedUser = (socketId: string) => {
-        const deleted = this.videoRefs.delete(socketId);
-        console.log("deleted" + socketId, deleted);
-
-        console.log("disconnected user jaja:", socketId);
-        const { room } = this.state;
-        if (room) {
-          const index = room.connections.findIndex(
-            (item) => item.socketId === socketId
-          );
-          console.log("connection index", index);
-          if (index !== -1) {
-            const tmp = room;
-            console.log("after", tmp);
-            tmp.connections.splice(index, 1);
-            this.setState({ room: { ...tmp } });
-          }
-        }
-      };
-
-      this.meeduConnect.onJoined = (data) => {
-        message.info(`Usuario conectado: ${data.username}`);
-        const { room } = this.state;
-        if (room) {
-          const tmp = room;
-          console.log("after", tmp);
-          tmp.connections.push(data);
-          this.setState({
-            room: { ...tmp },
-          });
-        }
-      };
-
-      this.meeduConnect.onJoinedTo = (data) => {
-        console.log("Connected users", data.connections);
-        message.success(`Conectado a: ${data.name}`);
-        this.setState({ room: data });
-      };
-
-      this.meeduConnect.onRoomNotFound = (roomId: string) => {
-        Modal.error({
-          title: "Meet no encontrado",
-          content: <div>{roomId}</div>,
-          okText: "ACEPTAR",
-        });
-      };
-
-      // when we have a remote stream
-      this.meeduConnect.onRemoteStream = (data) => {
-        setTimeout(() => {
-          if (this.videoRefs.has(data.socketId)) {
-            const ref = this.videoRefs.get(data.socketId);
-            ref!.srcObject = data.stream;
-          }
-        }, 500);
-      };
-
-      // when a user anabled or disabled the camera or micrphone
-      this.meeduConnect.onUserMediaStatusChanged = (data) => {
-        const { room } = this.state;
-        if (room) {
-          const index = room.connections.findIndex(
-            (item) => item.socketId === data.socketId
-          );
-          if (index !== -1) {
-            room.connections[index].cameraEnabled = data.cameraEnabled;
-            room.connections[index].microphoneEnabled = data.microphoneEnabled;
-            this.setState({ room: { ...room } });
-          }
-        }
-      };
-
-      this.meeduConnect.onLocalScreenStream = (stream) => {
-        if (this.screenShraingRef && stream) {
-          console.log("showing local screen", stream);
-          this.screenShraingRef.srcObject = stream;
-        } else {
-          console.log("local screenShraingRef is null");
-        }
-      };
-
-      // we have a remote screen sharing
-      this.meeduConnect.onScreenSharingStream = (stream) => {
-        if (this.screenShraingRef && stream) {
-          console.log("showing remote screen", stream);
-          this.screenShraingRef.srcObject = stream;
-          this.setState({ hasScreenSharing: true });
-        } else {
-          console.log("screenShraingRef is null");
-        }
-      };
-
-      this.meeduConnect.onScreenSharingChanged = (data: {
-        sharing: boolean;
-        iAmSharing: boolean;
-      }) => {
-        console.log("onScreenSharingChanged", data);
-        this.setState({
-          hasScreenSharing: data.sharing,
-          iAmSharingScreen: data.iAmSharing,
-        });
-      };
-    }
-  };
-
-  showCreateMeetModal = () => {
-    let name = "",
-      description = "";
-    Modal.success({
-      width: 600,
-      title: "Compartir Meet",
-      maskClosable: false,
-      okCancel: true,
-      okText: "CREAR",
-      cancelText: "CANCELAR",
-      content: (
-        <div className="ma-bottom-10 ma-top-20">
-          <Input
-            size="large"
-            placeholder="Nombre para el Meet"
-            onChange={(e) => {
-              name = e.target.value;
-            }}
-          />
-          <Input.TextArea
-            className="ma-top-10"
-            onChange={(e) => {
-              description = e.target.value;
-            }}
-            placeholder="Añade una descripción (opcional)"
-          />
-        </div>
-      ),
-      centered: true,
-      onOk: () => {
-        this.createMeet({ name, description });
-      },
-    });
-  };
-
-  createMeet = async (data: {
-    name: string;
-    description: string;
-  }): Promise<void> => {
-    if (data.name.trim().length == 0) {
-      message.error("Nombre para el Meet inválido");
-      return;
-    }
-    this.setState({ loading: true });
-    const response = await this.meeduConnect.createRoom(data);
-    this.setState({ loading: false });
-    if (response.status == 200) {
-      this.shareMeet(response.data);
-    } else {
-      message.info(response.data);
-    }
-  };
-
-  joinToMeet = () => {
-    if (!this.meeduConnect.connected) {
-      message.error("No estas conectado al servicio de meedu connect");
-      return;
-    }
-    if (this.meetCode.trim().length > 0) {
-      this.meeduConnect.joinToRoom(this.meetCode);
-      message.info("Uniendose al Meet");
-    } else {
-      message.info("Código inválido");
-    }
-  };
-
-  shareMeet = async (room: Room | null) => {
-    if (!room) {
-      message.error("Meet null");
-      return;
-    }
-    // this.meeduConnect.room;
-
-    const url = `${window.location.href}?code=${room._id}`;
-
-    const modal = Modal.success({
-      width: 792,
-      title: (
-        <p>
-          <span className="bold">Meet: </span>
-          {room.name}
-        </p>
-      ),
-      maskClosable: true,
-      okCancel: false,
-      className: "ant-modal-confirm-btns-hide",
-      content: (
-        <div>
-          <div className="d-flex">
-            <Input
-              className="border-radius-zero"
-              value={room._id}
-              readOnly
-              size="large"
-              addonBefore="CÓDIGO:"
-            />
-            <Button
-              type="primary"
-              size="large"
-              className="pa-hor-20 border-radius-zero"
-              onClick={() => {
-                navigator.clipboard.writeText(room._id);
-                message.info("Copiado");
-                modal.destroy();
-              }}
-            >
-              <CopyOutlined /> Copiar
-            </Button>
-          </div>
-
-          <div className="ma-bottom-20  ma-top-10 d-flex">
-            <Input
-              className="border-radius-zero"
-              value={url}
-              readOnly
-              size="large"
-              addonBefore="URL:"
-            />
-            <Button
-              type="primary"
-              size="large"
-              className="pa-hor-20 border-radius-zero"
-              onClick={() => {
-                navigator.clipboard.writeText(url);
-                message.info("Copiado");
-                modal.destroy();
-              }}
-            >
-              <CopyOutlined /> Copiar
-            </Button>
-          </div>
-        </div>
-      ),
-      centered: true,
-    });
-  };
-
   join = () => {
-    if (this.username.trim().length == 0) {
-      notification.error({
-        message: "ERROR",
-        description: "Nombre de usuario inválido",
-        placement: "bottomRight",
-      });
-      return;
-    }
-    localStorage.setItem("username", this.username);
-    this.init();
+    this.props.homeStore.join();
   };
 
   leave = () => {
-    this.meeduConnect.leaveRoom();
-    this.videoRefs.clear();
-    this.meetCode = "";
-    this.setState({
-      room: null,
-      hasScreenSharing: false,
-      iAmSharingScreen: false,
-    });
+    this.props.homeStore.leave();
   };
 
   render() {
@@ -444,7 +64,7 @@ export default class Home extends React.PureComponent<
       loading,
       hasScreenSharing,
       iAmSharingScreen,
-    } = this.state;
+    } = this.props.homeStore;
 
     return (
       <Template>
@@ -464,7 +84,7 @@ export default class Home extends React.PureComponent<
                   <input
                     defaultValue={localStorage.getItem("username") || ""}
                     onChange={(e) => {
-                      this.username = e.target.value;
+                      this.props.homeStore.username = e.target.value;
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -539,8 +159,11 @@ export default class Home extends React.PureComponent<
                     className="ma-left-20"
                     onClick={
                       room
-                        ? () => this.shareMeet(this.meeduConnect.room)
-                        : this.showCreateMeetModal
+                        ? () =>
+                            this.props.homeStore.shareMeet(
+                              this.props.homeStore.meeduConnect.room
+                            )
+                        : this.props.homeStore.showCreateMeetModal
                     }
                   >
                     {room ? "compartir meet" : "Crear meet"}
@@ -550,22 +173,13 @@ export default class Home extends React.PureComponent<
               {/* END HEADER */}
 
               {/* START CONNECTIONS VIDEO */}
-              <MeetingContent
-                room={room}
-                meeduConnect={this.meeduConnect}
-                videoRefs={this.videoRefs}
-                meetCode={this.meetCode}
-              />
+              <MeetingContent />
               {/* END CONNECTIONS VIDEO */}
               {/* CURRENT USER */}
               <LocalUser
                 ref={(ref) => {
-                  this.localUser = ref;
+                  this.props.homeStore.localUser = ref;
                 }}
-                room={room}
-                shareScreenEnabled={!hasScreenSharing}
-                meeduConnect={this.meeduConnect}
-                onLeave={this.leave}
               />
               {/* END CURRENT USER */}
             </div>
@@ -573,23 +187,8 @@ export default class Home extends React.PureComponent<
             <div id="board" className={`d-none-768  `}>
               <NoJoined
                 ref={(ref) => {
-                  this.noJoinedRef = ref;
+                  this.props.homeStore.noJoinedRef = ref;
                 }}
-                meeduConnect={this.meeduConnect}
-                room={room}
-              />
-
-              <video
-                ref={(ref) => {
-                  this.screenShraingRef = ref;
-                }}
-                muted
-                autoPlay
-                playsInline
-                controls
-                className={
-                  hasScreenSharing && !iAmSharingScreen ? "" : "d-none"
-                }
               />
             </div>
           </div>
