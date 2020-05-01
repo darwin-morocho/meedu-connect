@@ -20,6 +20,11 @@ const Container = styled.div`
   display: flex;
   height: 100vh;
   width: 100%;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+
   #logo {
   }
   #nav {

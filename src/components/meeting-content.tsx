@@ -50,13 +50,15 @@ export default class Meeting extends React.PureComponent<{
       >
         {(!room || room.connections.length == 0) && (
           <div className="pre-joined">
-            <Lottie
-              options={{
-                autoplay: true,
-                animationData: require("../assets/lottie/developer.json"),
-              }}
-              height={200}
-            />
+            <div className="lottie">
+              <Lottie
+                options={{
+                  autoplay: true,
+                  animationData: require("../assets/lottie/developer.json"),
+                }}
+                height={200}
+              />
+            </div>
             <h3 className="pa-hor-20 t-center">
               {!room
                 ? "ingresa tu código para unirte a un meet"

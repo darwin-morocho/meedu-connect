@@ -41,7 +41,7 @@ export default class LocalUser extends React.PureComponent<{
     } = this.props.homeStore!;
     return (
       <div className={room ? `d-flex ai-end ` : "d-none"}>
-        <div id="local-container" className="d-none-768">
+        <div id="local-container">
           {/* LOCAL VIDEO */}
           <video
             id="local-video"

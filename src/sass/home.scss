@@ -7,6 +7,13 @@
   flex-direction: column;
   justify-content: space-between;
 
+  @media (max-width: 768px) {
+    width: 100%;
+    height: 50px;
+    flex-direction: row;
+    background-color: #e1e1e1;
+  }
+
   .menu-button {
     margin-bottom: 10px;
     cursor: pointer;
@@ -24,12 +31,25 @@
       width: 40px;
       height: 40px;
     }
+    @media (max-width: 768px) {
+      margin-bottom: 0px;
+      width: 50px;
+      height: 50px;
+      img {
+        width: 30px !important;
+        height: 30px !important;
+      }
+    }
   }
 }
 #content {
   flex: 1;
   height: 100vh;
   padding-left: 10px;
+  @media (max-width: 768px) {
+    padding: 0px;
+    height: calc(100vh - 40px);
+  }
 }
 
 .circle-button {
@@ -43,7 +63,14 @@
   -webkit-box-shadow: 1px 0px 5px 0px rgba(171, 161, 171, 1);
   -moz-box-shadow: 1px 0px 5px 0px rgba(171, 161, 171, 1);
   box-shadow: 1px 0px 5px 0px rgba(171, 161, 171, 1);
-
+  @media (max-width: 768px) {
+    width: 40px;
+    height: 40px;
+    img {
+      width: 20px !important;
+      height: 20px !important;
+    }
+  }
   &:hover {
     background-color: #cdcdcd;
     transition: ease all 0.5s;
@@ -61,6 +88,14 @@
     img {
       width: 50px;
       height: 50px;
+    }
+    @media (max-width: 768px) {
+      width: 50px;
+      height: 50px;
+      img {
+        width: 30px !important;
+        height: 30px !important;
+      }
     }
   }
 
@@ -142,15 +177,20 @@
   padding-top: 10px;
   padding-bottom: 10px;
 
+  @media (max-width: 768px) {
+    flex-direction: column;
+    padding-top: 0px;
+  }
+
   .section-header {
     padding: 15px 20px;
     background-color: #f0f0f0;
     border-top-right-radius: 20px;
     border-top-left-radius: 20px;
-  }
-
-  #chat {
-    flex: 1;
+    @media (max-width: 768px) {
+      padding: 5px;
+      border-radius: 0px;
+    }
   }
 
   #no-joined {
@@ -159,6 +199,10 @@
     height: 100%;
     position: relative;
     border-radius: 10px;
+
+    @media (max-width: 768px) {
+    }
+
     video {
       top: 0;
       left: 0;
@@ -171,6 +215,9 @@
       max-height: 100%;
       border-radius: 10px;
       object-fit: cover;
+      @media (max-width: 768px) {
+        border-radius: 0px;
+      }
     }
 
     .buttons {
@@ -204,7 +251,11 @@
     box-shadow: 1px 0px 5px 0px rgba(171, 161, 171, 1);
 
     @media (min-width: 768px) {
-      border-bottom-left-radius: 20px;
+    }
+
+    @media (max-width: 768px) {
+      flex: 1;
+      border-radius: 0px;
     }
 
     .section-header {
@@ -225,12 +276,25 @@
 
     .pre-joined {
       min-width: 550px;
+      @media (max-width: 768px) {
+        min-width: auto;
+        h3 {
+          font-weight: 300;
+          font-size: 14px;
+        }
+        .lottie {
+        }
+      }
     }
 
     .input-meet-code {
       padding: 10px 40px;
       margin-left: auto;
       margin-right: auto;
+
+      @media (max-width: 768px) {
+        padding: 10px;
+      }
 
       input {
         flex: 1;
@@ -243,6 +307,9 @@
         border: none;
         font-size: 17px;
         color: rgb(58, 58, 58);
+        @media (max-width: 768px) {
+          font-size: 14px;
+        }
         &::placeholder {
           color: rgba(120, 117, 117, 0.666);
           font-weight: 300;
@@ -263,6 +330,9 @@
         border-top-right-radius: 10px;
         border-bottom-right-radius: 10px;
         transition: ease all 0.5s;
+        @media (max-width: 768px) {
+          font-size: 13px !important;
+        }
         &:hover {
           background-color: rgb(220, 6, 63);
           transition: ease all 0.5s;
@@ -283,14 +353,21 @@
       position: relative;
       border-radius: 10px;
 
+      @media (max-width: 768px) {
+        max-width: 100px;
+        min-width: 100px;
+        max-height: 133px;
+        min-height: 133px;
+      }
+
       #local-video {
         position: absolute;
         left: 0;
         bottom: 0;
-        min-width: 140px;
+        min-width: 100%;
         min-height: 100%;
         max-height: 100%;
-        max-width: 140px;
+        max-width: 100%;
         width: auto;
         height: auto;
         object-fit: fill;
@@ -317,7 +394,7 @@
         max-width: 100%;
         width: auto;
         height: auto;
-        object-fit: cover;
+       
         overflow: hidden;
       }
 
@@ -352,6 +429,13 @@
         background-color: rgb(205, 205, 205);
         border-radius: 10px;
         border-bottom-left-radius: 20px;
+
+        @media (max-width: 768px) {
+          width: 100px;
+          max-width: 100px;
+          height: 133px;
+          max-height: 133px;
+        }
 
         .user-media-icons {
           position: absolute;
@@ -395,7 +479,6 @@
           min-height: 100%;
           max-height: 100%;
           max-width: 100%;
-
           width: auto;
           height: auto;
           object-fit: cover;
@@ -430,6 +513,10 @@
     padding: 0 10px;
     video {
       max-width: 100%;
+    }
+
+    @media (max-width: 768px) {
+      padding: 0px;
     }
 
     #remote-screen-prview {

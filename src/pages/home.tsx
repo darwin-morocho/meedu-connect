@@ -184,7 +184,7 @@ export default class Home extends React.PureComponent<{
               {/* END CURRENT USER */}
             </div>
             {/* END LOCAL */}
-            <div id="board" className={`d-none-768  `}>
+            <div id="board" className={room ? 'd-none-768' : ""}>
               <NoJoined
                 ref={(ref) => {
                   this.props.homeStore.noJoinedRef = ref;
