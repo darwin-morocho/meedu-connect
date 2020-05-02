@@ -252,7 +252,7 @@ export class HomeStore {
         const viewer = new Viewer(document.getElementById('messages')!, {
           inline: false,
           viewed: () => {
-            viewer.zoomTo(1.5);
+            viewer.zoomTo(1);
           },
           hidden: () => {
             console.log('viewer hidden');
