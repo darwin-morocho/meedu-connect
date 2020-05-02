@@ -43,6 +43,7 @@ export class HomeStore {
   imageRef: HTMLImageElement | null = null;
 
   @observable messages: IMessage[] = [];
+  @observable chatOpened = false;
   @observable cameraEnabled = true;
   @observable microphoneEnabled = true;
   @observable loading = false;

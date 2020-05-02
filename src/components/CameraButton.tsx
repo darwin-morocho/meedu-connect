@@ -1,9 +1,10 @@
-import React from "react";
-import MeeduConnect from "../libs/video-call";
-import { HomeStore } from "../mobx/home-state";
-import { inject, observer } from "mobx-react";
+import React from 'react';
+import MeeduConnect from '../libs/video-call';
+import { HomeStore } from '../mobx/home-state';
+import { inject, observer } from 'mobx-react';
+import { Tooltip } from 'antd';
 
-@inject("homeStore")
+@inject('homeStore')
 @observer
 export default class CameraButton extends React.PureComponent<{
   homeStore?: HomeStore;
@@ -16,21 +17,23 @@ export default class CameraButton extends React.PureComponent<{
     const { cameraEnabled, meeduConnect } = this.props.homeStore!;
 
     return (
-      <button
-        className={`circle-button ${cameraEnabled ? "primary" : "accent"}`}
-        onClick={() => {
-          meeduConnect.camera(!cameraEnabled);
-          this.props.homeStore!.cameraEnabled = !cameraEnabled;
-        }}
-      >
-        <img
-          src={
-            cameraEnabled
-              ? require("../assets/video-camera.svg")
-              : require("../assets/video-camera-off.svg")
-          }
-        />
-      </button>
+      <Tooltip title={cameraEnabled ? 'Desactivar cámara' : 'Activar cámara'}>
+        <button
+          className={`circle-button ${cameraEnabled ? 'primary' : 'accent'}`}
+          onClick={() => {
+            meeduConnect.camera(!cameraEnabled);
+            this.props.homeStore!.cameraEnabled = !cameraEnabled;
+          }}
+        >
+          <img
+            src={
+              cameraEnabled
+                ? require('../assets/video-camera.svg')
+                : require('../assets/video-camera-off.svg')
+            }
+          />
+        </button>
+      </Tooltip>
     );
   }
 }

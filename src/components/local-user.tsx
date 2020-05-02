@@ -5,6 +5,7 @@ import CameraButton from './CameraButton';
 import MicrophoneButton from './ MicrophoneButton';
 import { inject, observer } from 'mobx-react';
 import { HomeStore } from '../mobx/home-state';
+import { Tooltip } from 'antd';
 
 @inject('homeStore')
 @observer
@@ -19,14 +20,16 @@ export default class LocalUser extends React.PureComponent<{
   localVideo: HTMLVideoElement | null = null;
 
   ScreenShareButton = () => (
-    <button
-      className="circle-button ma-left-10"
-      onClick={() => {
-        this.props.homeStore!.meeduConnect.screenShare();
-      }}
-    >
-      <img src="https://image.flaticon.com/icons/svg/808/808574.svg" width="40" />
-    </button>
+    <Tooltip title="Compartir pantalla">
+      <button
+        className="circle-button ma-left-10"
+        onClick={() => {
+          this.props.homeStore!.meeduConnect.screenShare();
+        }}
+      >
+        <img src="https://image.flaticon.com/icons/svg/808/808574.svg" width="40" />
+      </button>
+    </Tooltip>
   );
 
   render() {

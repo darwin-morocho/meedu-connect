@@ -98,10 +98,10 @@ export default class Chat extends React.Component<{
   };
 
   render() {
-    const { messages, viewImage, imageRefs } = this.props.homeStore!;
+    const { messages, viewImage, imageRefs, chatOpened } = this.props.homeStore!;
     const { inputValue } = this.state;
     return (
-      <div id="chat">
+      <div id="chat" className={chatOpened ? 'open' : ''}>
         <div id="messages" className="messages">
           <List
             dataSource={messages}

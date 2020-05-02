@@ -1,5 +1,5 @@
-import React, { PureComponent } from "react";
-import styled from "styled-components";
+import React, { PureComponent } from 'react';
+import styled from 'styled-components';
 import {
   Layout,
   Menu,
@@ -9,10 +9,11 @@ import {
   Popover,
   Divider,
   Tooltip,
-} from "antd";
-import { CaretDownOutlined } from "@ant-design/icons";
+  Popconfirm,
+} from 'antd';
+import { CaretDownOutlined } from '@ant-design/icons';
 
-import auth from "../libs/auth";
+import auth from '../libs/auth';
 const { Header, Content, Footer } = Layout;
 
 const Container = styled.div`
@@ -33,7 +34,7 @@ const Container = styled.div`
     width: 100%;
     button {
       border: none;
-      font-family: "Roboto", sans-serif;
+      font-family: 'Roboto', sans-serif;
       cursor: pointer;
       background-color: transparent;
       color: #25364e;
@@ -54,13 +55,13 @@ export default class Template extends PureComponent<{
 }> {
   componentDidMount() {
     if (auth.user === null) {
-      window.location.href = "/login";
+      window.location.href = '/login';
     }
   }
 
   onLogOut = async () => {
     await auth.logOut();
-    window.location.href = "/login";
+    window.location.href = '/login';
   };
 
   /*
@@ -79,17 +80,23 @@ export default class Template extends PureComponent<{
       <Container>
         <div id="menu">
           <div></div>
-          <Tooltip title="Cerrar sesión" placement="right">
-            <div
-              className="menu-button"
-              onClick={() => {
-                localStorage.clear();
-                window.location.href = "/login";
-              }}
-            >
-              <img src="https://image.flaticon.com/icons/svg/1828/1828427.svg" />
-            </div>
-          </Tooltip>
+          <Popconfirm
+            placement={window.innerWidth > 768 ? 'right' : 'bottomRight'}
+            title="Desea salir de su cuenta?"
+            onCancel={() => {}}
+            okText="SALIR"
+            cancelText="Cancelar"
+            onConfirm={() => {
+              localStorage.clear();
+              window.location.href = '/login';
+            }}
+          >
+            <Tooltip title="Cerrar sesión" placement="right">
+              <div className="menu-button">
+                <img src="https://image.flaticon.com/icons/svg/1828/1828427.svg" />
+              </div>
+            </Tooltip>
+          </Popconfirm>
         </div>
         <div id="content">{children}</div>
       </Container>

@@ -59,7 +59,14 @@ export default class Home extends React.PureComponent<{
   };
 
   render() {
-    const { connected, room, loading, hasScreenSharing, iAmSharingScreen } = this.props.homeStore;
+    const {
+      connected,
+      room,
+      loading,
+      hasScreenSharing,
+      iAmSharingScreen,
+      chatOpened,
+    } = this.props.homeStore;
 
     return (
       <Template>
@@ -136,13 +143,6 @@ export default class Home extends React.PureComponent<{
 
                 <div>
                   <Button
-                    shape="circle"
-                    size="large"
-                    icon={
-                      <img width="20" src="https://image.flaticon.com/icons/svg/271/271221.svg" />
-                    }
-                  />
-                  <Button
                     type="primary"
                     size="large"
                     shape="round"
@@ -156,6 +156,26 @@ export default class Home extends React.PureComponent<{
                   >
                     {room ? 'compartir meet' : 'Crear meet'}
                   </Button>
+                  {room && (
+                    <Button
+                      shape="circle"
+                      size="large"
+                      className="visible-xs-inline-block ma-left-20"
+                      onClick={() => {
+                        this.props.homeStore.chatOpened = !chatOpened;
+                      }}
+                      icon={
+                        <img
+                          width="20"
+                          src={
+                            chatOpened
+                              ? 'https://image.flaticon.com/icons/svg/860/860796.svg'
+                              : 'https://image.flaticon.com/icons/svg/2462/2462719.svg'
+                          }
+                        />
+                      }
+                    />
+                  )}
                 </div>
               </div>
               {/* END HEADER */}
@@ -190,8 +210,6 @@ export default class Home extends React.PureComponent<{
           </div>
         )}
         <Loading open={loading} />
-
-      
       </Template>
     );
   }
