@@ -1,35 +1,36 @@
 /* eslint-disable no-unused-vars */
-import "webrtc-adapter";
-import React from "react";
-import Lottie from "react-lottie";
-import Template from "../components/template";
-import { inject, observer } from "mobx-react";
-
-import "../sass/home.scss";
-import { Button } from "antd";
-import Loading from "../components/loading";
-import MeetingContent from "../components/meeting-content";
-import LocalUser from "../components/local-user";
-import NoJoined from "../components/no-joined";
-import { HomeStore } from "../mobx/home-state";
+import 'webrtc-adapter';
+import React from 'react';
+import Lottie from 'react-lottie';
+import Template from '../components/template';
+import { inject, observer } from 'mobx-react';
+import 'viewerjs/dist/viewer.css';
+import '../sass/home.scss';
+import { Button } from 'antd';
+import Loading from '../components/loading';
+import MeetingContent from '../components/meeting-content';
+import LocalUser from '../components/local-user';
+import NoJoined from '../components/no-joined';
+import { HomeStore } from '../mobx/home-state';
+import Chat from '../components/chat';
 
 const config = {
   iceServers: [
-    { urls: ["stun:stun.l.google.com:19302"] },
+    { urls: ['stun:stun.l.google.com:19302'] },
     {
-      urls: ["turn:95.217.132.49:80?transport=udp"],
-      username: "bdb5f88b",
-      credential: "64e9eac4",
+      urls: ['turn:95.217.132.49:80?transport=udp'],
+      username: 'bdb5f88b',
+      credential: '64e9eac4',
     },
     {
-      urls: ["turn:95.217.132.49:80?transport=tcp"],
-      username: "bdb5f88b",
-      credential: "64e9eac4",
+      urls: ['turn:95.217.132.49:80?transport=tcp'],
+      username: 'bdb5f88b',
+      credential: '64e9eac4',
     },
   ],
 };
 
-@inject("homeStore")
+@inject('homeStore')
 @observer
 export default class Home extends React.PureComponent<{
   homeStore: HomeStore;
@@ -38,12 +39,12 @@ export default class Home extends React.PureComponent<{
   componentDidMount() {
     // get code from url
     const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get("code");
+    const code = urlParams.get('code');
     if (code) {
       this.props.homeStore.meetCode = code;
     }
 
-    const username = localStorage.getItem("username");
+    const username = localStorage.getItem('username');
     if (username) {
       this.props.homeStore.username = username;
     }
@@ -58,13 +59,7 @@ export default class Home extends React.PureComponent<{
   };
 
   render() {
-    const {
-      connected,
-      room,
-      loading,
-      hasScreenSharing,
-      iAmSharingScreen,
-    } = this.props.homeStore;
+    const { connected, room, loading, hasScreenSharing, iAmSharingScreen } = this.props.homeStore;
 
     return (
       <Template>
@@ -75,19 +70,19 @@ export default class Home extends React.PureComponent<{
                 <Lottie
                   options={{
                     autoplay: true,
-                    animationData: require("../assets/lottie/developer.json"),
+                    animationData: require('../assets/lottie/developer.json'),
                   }}
                   width={200}
                   height={250}
                 />
                 <div className="d-flex">
                   <input
-                    defaultValue={localStorage.getItem("username") || ""}
+                    defaultValue={localStorage.getItem('username') || ''}
                     onChange={(e) => {
                       this.props.homeStore.username = e.target.value;
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") {
+                      if (e.key === 'Enter') {
                         this.join();
                       }
                     }}
@@ -104,7 +99,7 @@ export default class Home extends React.PureComponent<{
                 <Lottie
                   options={{
                     autoplay: true,
-                    animationData: require("../assets/lottie/no-internet-animation.json"),
+                    animationData: require('../assets/lottie/no-internet-animation.json'),
                   }}
                   width={200}
                   height={250}
@@ -116,7 +111,7 @@ export default class Home extends React.PureComponent<{
                   Si el problema persiste revisa tu conexión.
                 </p>
                 <br />
-                <Button type="danger" size="large" onClick={this.leave}>
+                <Button type="default" size="large" onClick={this.leave}>
                   ABANDONAR EL MEET
                 </Button>
               </div>
@@ -133,12 +128,10 @@ export default class Home extends React.PureComponent<{
                 <div id="status">
                   <div
                     style={{
-                      backgroundColor: connected ? "#00C853" : "#F50057",
+                      backgroundColor: connected ? '#00C853' : '#F50057',
                     }}
                   ></div>
-                  <span className="d-none-480">
-                    {connected ? "Conectado " : "Desconectado"}
-                  </span>
+                  <span className="d-none-480">{connected ? 'Conectado ' : 'Desconectado'}</span>
                 </div>
 
                 <div>
@@ -146,10 +139,7 @@ export default class Home extends React.PureComponent<{
                     shape="circle"
                     size="large"
                     icon={
-                      <img
-                        width="20"
-                        src="https://image.flaticon.com/icons/svg/271/271221.svg"
-                      />
+                      <img width="20" src="https://image.flaticon.com/icons/svg/271/271221.svg" />
                     }
                   />
                   <Button
@@ -160,13 +150,11 @@ export default class Home extends React.PureComponent<{
                     onClick={
                       room
                         ? () =>
-                            this.props.homeStore.shareMeet(
-                              this.props.homeStore.meeduConnect.room
-                            )
+                            this.props.homeStore.shareMeet(this.props.homeStore.meeduConnect.room)
                         : this.props.homeStore.showCreateMeetModal
                     }
                   >
-                    {room ? "compartir meet" : "Crear meet"}
+                    {room ? 'compartir meet' : 'Crear meet'}
                   </Button>
                 </div>
               </div>
@@ -184,16 +172,26 @@ export default class Home extends React.PureComponent<{
               {/* END CURRENT USER */}
             </div>
             {/* END LOCAL */}
-            <div id="board" className={room ? 'd-none-768' : ""}>
+            <div id="board" className={room ? 'd-none-768' : ''}>
               <NoJoined
                 ref={(ref) => {
                   this.props.homeStore.noJoinedRef = ref;
                 }}
               />
             </div>
+
+            {room && (
+              <Chat
+                ref={(ref) => {
+                  this.props.homeStore.chatRef = ref;
+                }}
+              />
+            )}
           </div>
         )}
         <Loading open={loading} />
+
+      
       </Template>
     );
   }

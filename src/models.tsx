@@ -18,21 +18,10 @@ export enum IMessageType {
 }
 
 export interface IMessage {
-  userId: number;
+  username: string;
+  sender: boolean;
   value: string;
   type: IMessageType;
-  createdAt: Date;
-}
-
-export interface ICall {
-  _id: string;
-  callingId: string;
-  providerId: number;
-  clientId: number;
-  finishedAt: Date | null;
-  backup: string[];
-  chat: IMessage[];
-  type: string;
   createdAt: Date;
 }
 

@@ -1,11 +1,82 @@
 import firebase from './firebase';
 
 import { message } from 'antd';
+import Compressor from 'compressorjs';
 
 function getFileExtension(name: string): string | null {
   const found = name.lastIndexOf('.') + 1;
   return found > 0 ? name.substr(found) : null;
 }
+
+export const compressImage = async (file: File): Promise<Blob | null> => {
+  return new Promise<Blob | null>((resolve, reject) => {
+    new Compressor(file, {
+      quality: 0.6,
+      success(result) {
+        resolve(result);
+      },
+      error(err) {
+        console.log(err.message);
+        resolve(null);
+      },
+    });
+  });
+};
+
+export const uploadBlob = (meetCode: string, blob: Blob, file: File): Promise<string | null> => {
+  console.log('uploading blob');
+  return new Promise<string | null>((resolve, reject) => {
+    // Create a root reference
+    const storageRef = firebase.storage().ref();
+    const ext = getFileExtension(file.name);
+    const path = `meets/${meetCode}/images/${Date.now()}${ext}`;
+    const task: firebase.storage.UploadTask = storageRef.child(path).put(blob);
+    task.on(
+      'state_changed',
+      (snapshot) => {
+        // Observe state change events such as progress, pause, and resume
+        // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+        var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        console.log('Upload is ' + progress + '% done');
+      },
+      (error) => {
+        console.log('uploading blob error', error);
+      },
+      async () => {
+        const url = await task.snapshot.ref.getDownloadURL();
+        console.log('uploading blob exito', url);
+        resolve(url);
+      }
+    );
+  });
+};
+
+export const uploadFile = (meetCode: string, file: File): Promise<string | null> => {
+  console.log('uploading file');
+  return new Promise<string | null>((resolve, reject) => {
+    // Create a root reference
+    const storageRef = firebase.storage().ref();
+    const path = `meets/${meetCode}/files/${Date.now()}/${file.name}`;
+    const task: firebase.storage.UploadTask = storageRef.child(path).put(file);
+    task.on(
+      'state_changed',
+      (snapshot) => {
+        // Observe state change events such as progress, pause, and resume
+        // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+        var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        console.log('Upload is ' + progress + '% done');
+      },
+      (error) => {
+        console.log('uploading file error', error);
+      },
+      async () => {
+        const url = await task.snapshot.ref.getDownloadURL();
+        console.log('uploading file exito', url);
+        resolve(url);
+      }
+    );
+  });
+};
 
 // export interface MyUploadTask {
 //   id: number;
