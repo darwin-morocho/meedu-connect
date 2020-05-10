@@ -1,6 +1,6 @@
 import { observable, action } from 'mobx';
-import MeeduConnect from '../libs/video-call';
-import { Room, IMessage } from '../models';
+import MeeduConnect, { SignalingEvents } from '../libs/signaling';
+import { Room, IMessage, UserConnection, UserMediaStatus } from '../models';
 import NoJoined from '../components/no-joined';
 import auth from '../libs/auth';
 import { notification, message, Modal, Input, Button } from 'antd';
@@ -12,21 +12,153 @@ import Viewer from 'viewerjs';
 
 const config = {
   iceServers: [
-    { urls: ['stun:stun.l.google.com:19302'] },
     {
-      urls: ['turn:95.217.132.49:80?transport=udp'],
-      username: 'bdb5f88b',
-      credential: '64e9eac4',
+      urls: ['stun:159.65.65.214:3478'],
     },
     {
-      urls: ['turn:95.217.132.49:80?transport=tcp'],
-      username: 'bdb5f88b',
-      credential: '64e9eac4',
+      urls: ['turn:159.65.65.214:3478?transport=udp'],
+      username: 'bccs6991',
+      credential: 'ptyk2533',
+    },
+    {
+      urls: ['turn:159.65.65.214:3478?transport=tcp'],
+      username: 'bccs6991',
+      credential: 'ptyk2533',
     },
   ],
 };
 
-export class HomeStore {
+export class HomeStore implements SignalingEvents {
+  onConnected(socketId: string): void {
+    if (!this.room) {
+      // if the user is not connected yet to one room
+      console.log('socketId:', socketId);
+      this.connected = true;
+      this.loading = false;
+
+      this.setLocalStream();
+      Notification.requestPermission().then((result) => {
+        if (result === 'granted') {
+          this.notificationsOk = true;
+        }
+      });
+    } else {
+      this.meeduConnect.joinToRoom(this.room._id);
+      this.connected = true;
+
+      this.setLocalStream();
+    }
+  }
+
+  onConnectError(): void {
+    if (this.loading && !this.connected) {
+      this.loading = false;
+      notification.error({
+        message: 'ERROR',
+        description:
+          'No se puedo conectar el servicio de Meedu Connect. Revisa tu conexíon e intenta nuevamente.',
+        placement: 'bottomRight',
+      });
+    } else if (this.connected) {
+      this.loading = false;
+
+      notification.error({
+        message: 'ERROR',
+        description: 'No se puedo conectar el servicio de Meedu Connect',
+        placement: 'bottomRight',
+      });
+    }
+  }
+  onDisconnected(): void {
+    console.log('disconnected');
+    this.meeduConnect.leaveRoom();
+    this.videoRefs.clear();
+
+    if (this.room) {
+      this.connected = false;
+      this.room.connections = [];
+    } else {
+      this.connected = false;
+    }
+  }
+  onDisconnectedUser(socketId: string): void {
+    const deleted = this.videoRefs.delete(socketId);
+    console.log('deleted' + socketId, deleted);
+
+    console.log('disconnected user jaja:', socketId);
+
+    if (this.room) {
+      const index = this.room.connections.findIndex((item) => item.socketId === socketId);
+      console.log('connection index', index);
+      if (index !== -1) {
+        this.room.connections.splice(index, 1);
+      }
+    }
+  }
+
+  onRoomNotFound(roomId: string): void {
+    Modal.error({
+      title: 'Meet no encontrado',
+      content: <div>{roomId}</div>,
+      okText: 'ACEPTAR',
+    });
+  }
+
+  onScreenSharingStream(stream: MediaStream): void {
+    if (this.screenShraingRef && stream) {
+      console.log('showing remote screen', stream);
+      this.screenShraingRef.srcObject = stream;
+      this.hasScreenSharing = true;
+    } else {
+      console.log('screenShraingRef is null');
+    }
+  }
+  onLocalScreenStream(stream: MediaStream): void {
+    if (this.screenShraingRef && stream) {
+      console.log('showing local screen', stream);
+      this.screenShraingRef.srcObject = stream;
+    } else {
+      console.log('local screenShraingRef is null');
+    }
+  }
+  onMessageRecived(data: IMessage): void {
+    this.addMessage(data);
+  }
+  onJoinedTo(data: Room): void {
+    message.success(`Conectado a: ${data.name}`);
+    this.connectedAudio.play();
+    this.room = data;
+  }
+  onJoined(data: UserConnection): void {
+    message.info(`Usuario conectado: ${data.username}`);
+    this.connectedAudio.play();
+    if (this.room) {
+      this.room.connections.push(data);
+    }
+  }
+  onUserMediaStatusChanged(data: UserMediaStatus): void {
+    if (this.room) {
+      const index = this.room.connections.findIndex((item) => item.socketId === data.socketId);
+      if (index !== -1) {
+        this.room.connections[index].cameraEnabled = data.cameraEnabled;
+        this.room.connections[index].microphoneEnabled = data.microphoneEnabled;
+      }
+    }
+  }
+  onRemoteStream(data: { socketId: string; stream: MediaStream }): void {
+    setTimeout(() => {
+      if (this.videoRefs.has(data.socketId)) {
+        const ref = this.videoRefs.get(data.socketId);
+        ref!.srcObject = data.stream;
+      }
+    }, 500);
+  }
+  onScreenSharingChanged(data: { sharing: boolean; iAmSharing: boolean }): void {
+    console.log('onScreenSharingChanged', data);
+    this.hasScreenSharing = data.sharing;
+    this.iAmSharingScreen = data.iAmSharing;
+  }
+
   connectedAudio = new Audio(require('../assets/ringtones/cell_phone.mp3'));
   messageAudio = new Audio(require('../assets/ringtones/dilin.mp3'));
   localUser: LocalUser | null = null;
@@ -82,155 +214,11 @@ export class HomeStore {
         //
       }
 
-      this.meeduConnect.onConnected = (socketId: string) => {
-        if (!this.room) {
-          // if the user is not connected yet to one room
-          console.log('socketId:', socketId);
-          this.connected = true;
-          this.loading = false;
-
-          this.setLocalStream();
-          Notification.requestPermission().then((result) => {
-            if (result === 'granted') {
-              this.notificationsOk = true;
-            }
-          });
-        } else {
-          this.meeduConnect.joinToRoom(this.room._id);
-          this.connected = true;
-
-          this.setLocalStream();
-        }
-      };
-
-      this.meeduConnect.onConnectError = () => {
-        if (this.loading && !this.connected) {
-          this.loading = false;
-          notification.error({
-            message: 'ERROR',
-            description:
-              'No se puedo conectar el servicio de Meedu Connect. Revisa tu conexíon e intenta nuevamente.',
-            placement: 'bottomRight',
-          });
-        } else if (this.connected) {
-          this.loading = false;
-
-          notification.error({
-            message: 'ERROR',
-            description: 'No se puedo conectar el servicio de Meedu Connect',
-            placement: 'bottomRight',
-          });
-        }
-
-        // message.error("No se pudo conectar al servicio de meedu connect");
-      };
-
-      this.meeduConnect.onDisconnected = () => {
-        console.log('disconnected');
-        this.meeduConnect.leaveRoom();
-        this.videoRefs.clear();
-
-        if (this.room) {
-          this.connected = false;
-          this.room.connections = [];
-        } else {
-          this.connected = false;
-        }
-      };
-
-      this.meeduConnect.onDisconnectedUser = (socketId: string) => {
-        const deleted = this.videoRefs.delete(socketId);
-        console.log('deleted' + socketId, deleted);
-
-        console.log('disconnected user jaja:', socketId);
-
-        if (this.room) {
-          const index = this.room.connections.findIndex((item) => item.socketId === socketId);
-          console.log('connection index', index);
-          if (index !== -1) {
-            this.room.connections.splice(index, 1);
-          }
-        }
-      };
-
-      this.meeduConnect.onJoined = (data) => {
-        message.info(`Usuario conectado: ${data.username}`);
-        this.connectedAudio.play();
-        if (this.room) {
-          this.room.connections.push(data);
-        }
-      };
-
-      this.meeduConnect.onJoinedTo = (data) => {
-        message.success(`Conectado a: ${data.name}`);
-        this.connectedAudio.play();
-        this.room = data;
-      };
-
-      this.meeduConnect.onRoomNotFound = (roomId: string) => {
-        Modal.error({
-          title: 'Meet no encontrado',
-          content: <div>{roomId}</div>,
-          okText: 'ACEPTAR',
-        });
-      };
-
-      // when we have a remote stream
-      this.meeduConnect.onRemoteStream = (data) => {
-        setTimeout(() => {
-          if (this.videoRefs.has(data.socketId)) {
-            const ref = this.videoRefs.get(data.socketId);
-            ref!.srcObject = data.stream;
-          }
-        }, 500);
-      };
-
-      // when a user anabled or disabled the camera or micrphone
-      this.meeduConnect.onUserMediaStatusChanged = (data) => {
-        if (this.room) {
-          const index = this.room.connections.findIndex((item) => item.socketId === data.socketId);
-          if (index !== -1) {
-            this.room.connections[index].cameraEnabled = data.cameraEnabled;
-            this.room.connections[index].microphoneEnabled = data.microphoneEnabled;
-          }
-        }
-      };
-
-      this.meeduConnect.onLocalScreenStream = (stream) => {
-        if (this.screenShraingRef && stream) {
-          console.log('showing local screen', stream);
-          this.screenShraingRef.srcObject = stream;
-        } else {
-          console.log('local screenShraingRef is null');
-        }
-      };
-
-      // we have a remote screen sharing
-      this.meeduConnect.onScreenSharingStream = (stream) => {
-        if (this.screenShraingRef && stream) {
-          console.log('showing remote screen', stream);
-          this.screenShraingRef.srcObject = stream;
-          this.hasScreenSharing = true;
-        } else {
-          console.log('screenShraingRef is null');
-        }
-      };
-
-      this.meeduConnect.onScreenSharingChanged = (data: {
-        sharing: boolean;
-        iAmSharing: boolean;
-      }) => {
-        console.log('onScreenSharingChanged', data);
-        this.hasScreenSharing = data.sharing;
-        this.iAmSharingScreen = data.iAmSharing;
-      };
-
-      this.meeduConnect.onMessageRecived = this.addMessage;
+      this.meeduConnect.events = this;
     }
   };
 
-  @action addMessage = (data: string) => {
-    const message: IMessage = JSON.parse(data);
+  @action addMessage = (message: IMessage) => {
     this.messages.push({ ...message, sender: false, createdAt: new Date() });
     if (this.chatRef) {
       this.messageAudio.play();

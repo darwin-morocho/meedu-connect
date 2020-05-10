@@ -1,7 +1,7 @@
 import React from 'react';
 import moment from 'moment';
 import Linkify from 'react-linkify';
-import MeeduConnect from '../libs/video-call';
+import MeeduConnect from '../libs/signaling';
 import { HomeStore } from '../mobx/home-state';
 import { inject, observer } from 'mobx-react';
 

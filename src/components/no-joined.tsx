@@ -2,7 +2,7 @@ import React from "react";
 import { Room } from "../models";
 import MicrophoneButton from "./ MicrophoneButton";
 import CameraButton from "./CameraButton";
-import MeeduConnect from "../libs/video-call";
+import MeeduConnect from "../libs/signaling";
 import { inject, observer } from "mobx-react";
 import { HomeStore } from "../mobx/home-state";
 import { intercept, observe } from "mobx";

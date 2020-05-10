@@ -1,5 +1,5 @@
 import React from 'react';
-import MeeduConnect from '../libs/video-call';
+import MeeduConnect from '../libs/signaling';
 import { Room } from '../models';
 import CameraButton from './CameraButton';
 import MicrophoneButton from './ MicrophoneButton';

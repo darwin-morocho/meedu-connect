@@ -4,48 +4,47 @@ import MeeduConnectAPI, {
   // eslint-disable-next-line no-unused-vars
   MeeduConnectAPIResponse,
 } from '../api/meedu-connect-api';
-import { UserConnection, Room, UserMediaStatus } from '../models';
-
-type On = (data?: any) => void;
-type OnJoinedTo = (data: Room) => void;
-type OnUserMediaStatusChanged = (data: UserMediaStatus) => void;
-type OnScreenSharingChanged = (data: { sharing: boolean; iAmSharing: boolean }) => void;
-
-type OnRemoteStream = (data: { socketId: string; stream: MediaStream }) => void;
-
-type OnJoined = (data: UserConnection) => void;
+import { UserConnection, Room, UserMediaStatus, IMessage } from '../models';
+import Broadcast from './broadcast';
 
 interface OnIceCandidate {
   socketId: string;
   candidate: RTCIceCandidate;
 }
 
+export interface SignalingEvents {
+  onConnected(data: any): void;
+  onConnectError(): void;
+  onDisconnected(): void;
+  onDisconnectedUser(data: any): void;
+  onRoomNotFound(data: any): void;
+  onScreenSharingStream(data: any): void;
+  onLocalScreenStream(data: any): void;
+  onMessageRecived(data: any): void;
+  onJoinedTo(data: Room): void;
+  onJoined(data: UserConnection): void;
+  onUserMediaStatusChanged(data: UserMediaStatus): void;
+  onRemoteStream(data: { socketId: string; stream: MediaStream }): void;
+  onScreenSharingChanged(data: { sharing: boolean; iAmSharing: boolean }): void;
+}
+
 export default class MeeduConnect {
   private config!: RTCConfiguration;
-  private connections = new Map<string, { peer: RTCPeerConnection; channel: RTCDataChannel }>();
+  private peers = new Map<string, RTCPeerConnection>();
+
   permissionGranted = false;
   private socket: SocketIOClient.Socket | null = null;
   localStream: MediaStream | undefined = undefined;
   captureStream: MediaStream | undefined = undefined;
-  onConnected: On | null = null;
-  onConnectError: On | null = null;
-  onDisconnected: On | null = null;
-  onDisconnectedUser: On | null = null;
-  onRoomNotFound: On | null = null;
-  onJoinedTo: OnJoinedTo | null = null;
-  onJoined: OnJoined | null = null;
-  onUserMediaStatusChanged: OnUserMediaStatusChanged | null = null;
+
+  events!: SignalingEvents;
   connected: boolean = false;
   private meeduAPI!: MeeduConnectAPI;
   private currentRoom: Room | null = null;
-  onRemoteStream: OnRemoteStream | null = null;
   cameraEnabled: boolean = true;
   microphoneEnabled: boolean = true;
   private username!: string;
-  onScreenSharingStream: On | null = null;
-  onLocalScreenStream: On | null = null;
-  onMessageRecived: On | null = null;
-  onScreenSharingChanged: OnScreenSharingChanged | null = null;
+
   private broadcast: Broadcast | null = null;
   private isScreenSharing = false;
 
@@ -60,8 +59,8 @@ export default class MeeduConnect {
   }
 
   async getPeerConnecction(socketId: string): Promise<RTCPeerConnection> {
-    if (this.connections.has(socketId)) {
-      return this.connections.get(socketId)!.peer;
+    if (this.peers.has(socketId)) {
+      return this.peers.get(socketId)!;
     }
     const peer = new RTCPeerConnection(this.config);
 
@@ -75,62 +74,35 @@ export default class MeeduConnect {
       }
     };
 
-    peer.onconnectionstatechange = (e) => {
-      if (peer.connectionState === 'connected') {
-        // Peers connected!
-        console.log(`connected with ${socketId}`);
-      }
-    };
-
     peer.ontrack = (e) => {
-      if (this.onRemoteStream) {
-        console.log('has remote stream', socketId);
-        this.onRemoteStream({
-          socketId,
-          stream: e.streams[0],
-        });
-      }
+      console.log('has remote stream', socketId);
+      this.events.onRemoteStream({
+        socketId,
+        stream: e.streams[0],
+      });
     };
 
-    peer.ondatachannel = (ev) => {
-      const channel = ev.channel;
-      channel.onmessage = (e) => {
-        if (this.onMessageRecived) {
-          this.onMessageRecived(e.data);
-        }
-      };
-
-      channel.onopen = (e) => {
-        console.log('channel open');
-      };
-
-      channel.onclose = (e) => {
-        console.log('channel closed');
-      };
-
-      channel.onerror = (e) => {
-        console.log('channel error', e.error);
-      };
-    };
-    const channel: RTCDataChannel = peer.createDataChannel(`channel-${socketId}`);
-
-    this.connections.set(socketId, { peer, channel }); // save the peer
+    this.peers.set(socketId, peer); // save the peer
     // our local stream can provide different tracks, e.g. audio and
     // video. even though we're just using the video track, we should
     // add all tracks to the webrtc connection
     for (const track of this.localStream!.getTracks()) {
       peer.addTrack(track, this.localStream!);
     }
+
     return peer;
   }
 
   // attach the recived ice candidate
   private onIceCandidate = (data: OnIceCandidate) => {
-    if (this.connections.has(data.socketId)) {
-      this.connections.get(data.socketId)!.peer.addIceCandidate(data.candidate);
+    if (this.peers.has(data.socketId)) {
+      this.peers.get(data.socketId)!.addIceCandidate(data.candidate);
     }
   };
 
+  /**
+   * get the screen as stream and then share to the others users in the call
+   */
   async screenShare() {
     try {
       const mediaDevices = navigator.mediaDevices as any;
@@ -146,19 +118,15 @@ export default class MeeduConnect {
         audio: false,
       })) as MediaStream | undefined;
       if (this.captureStream) {
-        if (this.onScreenSharingChanged) {
-          this.onScreenSharingChanged({ sharing: true, iAmSharing: true });
-        }
+        this.events.onScreenSharingChanged({ sharing: true, iAmSharing: true });
         this.isScreenSharing = true;
 
-        for (let key of Array.from(this.connections.keys())) {
+        for (let key of Array.from(this.peers.keys())) {
           this.broadcast!.share(key, this.captureStream);
         }
 
         this.captureStream.getVideoTracks()[0].onended = () => {
-          if (this.onScreenSharingChanged) {
-            this.onScreenSharingChanged({ sharing: false, iAmSharing: false });
-          }
+          this.events.onScreenSharingChanged({ sharing: false, iAmSharing: false });
           this.isScreenSharing = false;
           this.captureStream = undefined;
           console.log('finished screen sharing');
@@ -196,6 +164,7 @@ export default class MeeduConnect {
    */
   private connect(host: string, token: string) {
     this.socket = io.connect(host, {
+      secure: true,
       query: {
         token,
         username: this.username,
@@ -206,32 +175,24 @@ export default class MeeduConnect {
 
     this.broadcast = new Broadcast(this.socket!, this.config);
     this.broadcast.onRemoteStream = (stream) => {
-      if (this.onScreenSharingStream) {
-        this.onScreenSharingStream(stream); // send the screen capture stream
-      }
+      this.events.onScreenSharingStream(stream); // send the screen capture stream
     };
     this.broadcast.onStopped = () => {
-      if (this.onScreenSharingChanged) {
-        this.onScreenSharingChanged({ sharing: false, iAmSharing: false }); // the remote screen sharing has been stopped
-      }
+      this.events.onScreenSharingChanged({ sharing: false, iAmSharing: false }); // the remote screen sharing has been stopped
     };
 
     // connected to the websocket
     this.socket.on('connected', (socketId: string) => {
       console.log('connected');
       this.connected = true;
-      if (this.onConnected) {
-        this.onConnected(socketId);
-      }
+      this.events.onConnected(socketId);
     });
 
     // disconnected from the websocket
     this.socket.on('disconnect', () => {
       this.connected = false;
-      if (this.onDisconnected) {
-        this.onDisconnected();
-        this.broadcast!.stop();
-      }
+      this.events.onDisconnected();
+      this.broadcast!.stop();
     });
 
     // connection failed
@@ -241,34 +202,28 @@ export default class MeeduConnect {
 
     this.socket.on('connect_error', (data: any) => {
       console.log('connect_error:', data);
-      if (this.onConnectError) {
-        this.onConnectError();
-      }
+      this.events.onConnectError();
     });
 
     // joined to room
     this.socket.on('joined-to', (data: Room) => {
       this.currentRoom = data;
-      if (this.onJoinedTo) {
-        this.onJoinedTo(data); // notify to the view
-        // creates a peer for each connected user
-        data.connections.forEach(async (item) => {
-          const peer = await this.getPeerConnecction(item.socketId);
-          const offer = await peer.createOffer();
-          await peer.setLocalDescription(offer);
-          // send the offer to the user
-          this.emit('offer', { socketId: item.socketId, offer });
-        });
-      }
+      this.events.onJoinedTo(data); // notify to the view
+      // creates a peer for each connected user
+      data.connections.forEach(async (item) => {
+        const peer = await this.getPeerConnecction(item.socketId);
+        const offer = await peer.createOffer();
+        await peer.setLocalDescription(offer);
+        // send the offer to the user
+        this.emit('offer', { socketId: item.socketId, offer });
+      });
     });
 
     // a new user was joined to the room
     this.socket.on('joined', (data: any) => {
-      if (this.onJoined) {
-        this.onJoined(data);
-        if (this.isScreenSharing) {
-          this.broadcast!.share(data.socketId, this.captureStream!);
-        }
+      this.events.onJoined(data);
+      if (this.isScreenSharing) {
+        this.broadcast!.share(data.socketId, this.captureStream!);
       }
     });
 
@@ -292,26 +247,24 @@ export default class MeeduConnect {
     this.socket.on('ice-canditate', this.onIceCandidate);
 
     this.socket.on('room-not-found', (roomId: string) => {
-      if (this.onRoomNotFound) {
-        this.onRoomNotFound(roomId);
-      }
+      this.events.onRoomNotFound(roomId);
     });
 
     // an user was disconnected
     this.socket.on('disconnected-user', (socketId: string) => {
-      if (this.onDisconnectedUser) {
-        this.onDisconnectedUser(socketId); // notify to the view
-      }
-      if (this.connections.has(socketId)) {
-        this.connections.get(socketId)!.peer.close();
-        this.connections.delete(socketId);
+      this.events.onDisconnectedUser(socketId); // notify to the view
+      if (this.peers.has(socketId)) {
+        this.peers.get(socketId)!.close();
+        this.peers.delete(socketId);
       }
     });
 
+    this.socket.on('message', (message: IMessage) => {
+      this.events.onMessageRecived(message);
+    });
+
     this.socket.on('camera-or-microphone-changed', (data: UserMediaStatus) => {
-      if (this.onUserMediaStatusChanged) {
-        this.onUserMediaStatusChanged(data);
-      }
+      this.events.onUserMediaStatusChanged(data);
     });
   }
 
@@ -342,11 +295,12 @@ export default class MeeduConnect {
   leaveRoom(): void {
     this.emit('leave', null);
     this.currentRoom = null;
-    this.connections.forEach((item) => {
-      item.peer.close();
-      item.channel.close();
+    this.peers.forEach((item) => {
+      item.close();
     });
-    this.connections.clear();
+
+    this.peers.clear();
+
     if (this.captureStream) {
       this.captureStream.getTracks().forEach((track) => track.stop());
       this.captureStream = undefined;
@@ -423,125 +377,6 @@ export default class MeeduConnect {
    * @param message must be a string, if you need send a object you must parse with JSON.stringify
    */
   sendMessage(message: string) {
-    this.connections.forEach((item) => {
-      console.log('sending message to', item.channel.id);
-      item.channel.send(message);
-    });
-  }
-}
-
-type OnStream = (stream: MediaStream) => void;
-class Broadcast {
-  private config!: RTCConfiguration;
-  private socket!: SocketIOClient.Socket;
-
-  private peers = new Map<string, Peer.Instance>();
-
-  onRemoteStream: null | OnStream = null;
-  onStopped: null | On = null;
-  private iAmSharing = false;
-  private wasConnected = false;
-
-  constructor(socket: SocketIOClient.Socket, config: RTCConfiguration) {
-    this.socket = socket;
-    this.config = config;
-
-    // whe have a remote screen sharing offer
-    this.socket.on('remote-screen-offer', async (data: { socketId: string; peerData: any }) => {
-      // if (this.peer) return; // if we have a current screen sharing
-      this.log('remote-screen-offer', data);
-
-      this.iAmSharing = false;
-
-      if (!this.peers.has('local')) {
-        const peer = new Peer({ initiator: false, config: this.config });
-        peer.on('stream', (stream) => {
-          console.log('broadcast got stream');
-          if (this.onRemoteStream) {
-            this.onRemoteStream(stream);
-          }
-        });
-        peer.on('error', (error) => {
-          console.log('remote screen error');
-        });
-        peer.on('connect', () => {
-          console.log('remote screen connected');
-          this.wasConnected = true;
-        });
-        peer.on('close', () => {
-          console.log('remote screen closed');
-          if (this.wasConnected) {
-            this.wasConnected = false;
-            this.stop();
-            if (this.onStopped) {
-              this.onStopped();
-            }
-          }
-        });
-        this.peers.set('local', peer);
-      }
-      const peer = this.peers.get('local')!;
-
-      peer.signal(data.peerData); //
-      peer.on('signal', (peerData) => {
-        // peerData could be answer (RTCSessionDescription) or ice candidate
-        this.log('answer', peerData);
-        this.socket.emit('screen-sharing-answer', {
-          socketId: data.socketId,
-          peerData: peerData,
-        });
-      });
-    });
-
-    //we have a remote screen answer or candidate
-    this.socket.on('remote-screen-answer', async (data: { socketId: string; peerData: any }) => {
-      if (this.peers.has(data.socketId)) {
-        // data.peerData could be answer or ice candidate
-        const peer = this.peers.get(data.socketId)!;
-        peer.signal(data.peerData);
-      }
-    });
-
-    this.socket.on('screen-sharing-stopped', () => {
-      this.stop();
-      if (this.onStopped) {
-        this.onStopped();
-      }
-    });
-  }
-
-  async share(socketId: string, stream: MediaStream): Promise<boolean> {
-    this.iAmSharing = true;
-    if (this.peers.has(socketId)) {
-      return true;
-    }
-
-    const peer = new Peer({
-      initiator: true,
-      config: this.config,
-      trickle: false,
-    });
-    peer.on('error', (err) => console.log('error', err));
-    peer.addStream(stream);
-    peer.on('signal', (data) => {
-      this.socket.emit('screen-sharing-offer', { socketId, peerData: data });
-    });
-    this.peers.set(socketId, peer);
-    return true;
-  }
-
-  // destroy the current peer
-  stop() {
-    if (this.iAmSharing) {
-      this.socket.emit('screen-sharing-stopped');
-    }
-    this.peers.forEach((value) => {
-      value.destroy();
-    });
-    this.peers.clear();
-  }
-
-  private log(event: string = '', data: any) {
-    // console.log(`broadcast ${event}:`, data);
+    this.emit('message', message);
   }
 }

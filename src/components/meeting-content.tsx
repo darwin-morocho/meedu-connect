@@ -2,7 +2,7 @@ import React from "react";
 import { Room } from "../models";
 import UserMediaStatusView from "./user-media-status-view";
 import Lottie from "react-lottie";
-import MeeduConnect from "../libs/video-call";
+import MeeduConnect from "../libs/signaling";
 import { message } from "antd";
 import { inject, observer } from "mobx-react";
 import { HomeStore } from "../mobx/home-state";
