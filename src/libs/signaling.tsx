@@ -1,4 +1,5 @@
 import io from 'socket.io-client';
+import dns from 'dns';
 import Peer from 'simple-peer';
 import MeeduConnectAPI, {
   // eslint-disable-next-line no-unused-vars
@@ -44,6 +45,7 @@ export default class MeeduConnect {
   cameraEnabled: boolean = true;
   microphoneEnabled: boolean = true;
   private username!: string;
+  private wsHost!: string;
 
   private broadcast: Broadcast | null = null;
   private isScreenSharing = false;
@@ -53,7 +55,8 @@ export default class MeeduConnect {
     return this.currentRoom;
   }
 
-  constructor(data: { config: RTCConfiguration; username: string }) {
+  constructor(data: { config: RTCConfiguration; username: string; wsHost: string }) {
+    this.wsHost = data.wsHost;
     this.config = data.config;
     this.username = data.username;
   }
@@ -140,9 +143,12 @@ export default class MeeduConnect {
     }
   }
 
-  // initialize the library
-  async init(options: { wsHost: string; token: string }): Promise<void> {
-    this.meeduAPI = new MeeduConnectAPI(options.wsHost);
+  /**
+   * initialize the library
+   * @param options
+   */
+  async init(): Promise<void> {
+    this.meeduAPI = new MeeduConnectAPI(this.wsHost);
     const mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: true,
       video: { width: 480, height: 640 },
@@ -151,10 +157,58 @@ export default class MeeduConnect {
       // if was successfull
       this.permissionGranted = true;
       this.localStream = mediaStream;
-      this.connect(options.wsHost, options.token); // connect to streaming websocket
+      window.addEventListener('online', this.onOnline);
+      window.addEventListener('offline', this.onOffline);
+
+      if (await this.hasInternet()) {
+        this.connect(); // connect to streaming websocket
+      }
     } else {
       this.permissionGranted = false;
     }
+  }
+
+  private onOnline = async () => {
+    if (await this.hasInternet()) {
+      this.connect(); // connect to streaming websocket
+    }
+  };
+
+  private hasInternet = (): Promise<boolean> => {
+    return new Promise<boolean>((resolve, reject) => {
+      dns.resolve('www.google.com', (err) => {
+        if (!err) {
+          console.log('you have internet');
+          resolve(true);
+        } else {
+          console.log('check your connection');
+          resolve(false);
+        }
+      });
+    });
+  };
+
+  private onOffline = () => {
+    console.log('you dont have internet');
+    this.events.onConnectError();
+    this.onDisconnected();
+  };
+
+  dispose() {
+    window.removeEventListener('online', this.onOnline);
+    window.removeEventListener('offline', this.onOffline);
+  }
+
+  private onDisconnected() {
+    this.connected = false;
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+    this.peers.forEach((item) => {
+      item.close();
+    });
+    this.peers.clear();
   }
 
   /**
@@ -162,15 +216,22 @@ export default class MeeduConnect {
    * @param host
    * @param token
    */
-  private connect(host: string, token: string) {
-    this.socket = io.connect(host, {
+  private async connect() {
+    const result = await this.meeduAPI.createUserToken({ username: this.username });
+    if (result.status != 200) {
+      this.events.onConnectError();
+      return;
+    }
+    this.socket = io.connect(this.wsHost, {
       secure: true,
       query: {
-        token,
+        token: result.data,
         username: this.username,
       },
       transports: ['websocket'],
       upgrade: false,
+      autoConnect: false,
+      forceNew: true,
     });
 
     this.broadcast = new Broadcast(this.socket!, this.config);
@@ -190,9 +251,7 @@ export default class MeeduConnect {
 
     // disconnected from the websocket
     this.socket.on('disconnect', () => {
-      this.connected = false;
-      this.events.onDisconnected();
-      this.broadcast!.stop();
+      this.onDisconnected();
     });
 
     // connection failed
@@ -266,6 +325,8 @@ export default class MeeduConnect {
     this.socket.on('camera-or-microphone-changed', (data: UserMediaStatus) => {
       this.events.onUserMediaStatusChanged(data);
     });
+
+    this.socket.connect();
   }
 
   /**
@@ -376,7 +437,7 @@ export default class MeeduConnect {
    * sends a message to the others user
    * @param message must be a string, if you need send a object you must parse with JSON.stringify
    */
-  sendMessage(message: string) {
+  sendMessage(message: IMessage) {
     this.emit('message', message);
   }
 }

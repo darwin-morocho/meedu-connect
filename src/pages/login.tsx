@@ -1,12 +1,12 @@
-import React from "react";
-import styled from "styled-components";
-import phone from "phone";
-import PhoneInput from "react-phone-input-2";
-import "react-phone-input-2/lib/style.css";
-import Loading from "../components/loading";
-import auth from "../libs/auth";
-import { notification, Button, message, Input } from "antd";
-import firebase from "../libs/firebase";
+import React from 'react';
+import styled from 'styled-components';
+import phone from 'phone';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import Loading from '../components/loading';
+import auth from '../libs/auth';
+import { notification, Button, message, Input } from 'antd';
+import firebase from '../libs/firebase';
 
 const Container = styled.div`
   display: flex;
@@ -41,12 +41,12 @@ export default class Login extends React.PureComponent<{
 }> {
   recaptcha: any;
   state = {
-    phoneNumber: "",
+    phoneNumber: '',
     fetching: false,
     step: LoginStep.input,
     captchaOk: false,
     phoneOk: false,
-    pin: "",
+    pin: '',
   };
 
   submit = async (e: any) => {
@@ -56,25 +56,22 @@ export default class Login extends React.PureComponent<{
   async componentDidMount() {
     const accessToken = await auth.getAccessToken();
     if (accessToken !== null) {
-      window.location.href = "/home";
+      window.location.href = '/home';
     }
 
-    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
-      this.recaptcha,
-      {
-        size: "normal",
-        callback: (response: any) => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-          // ...
-          this.setState({ captchaOk: true });
-        },
-        "expired-callback": () => {
-          this.setState({ captchaOk: false });
-          // Response expired. Ask user to solve reCAPTCHA again.
-          // ...
-        },
-      }
-    );
+    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(this.recaptcha, {
+      size: 'normal',
+      callback: (response: any) => {
+        // reCAPTCHA solved, allow signInWithPhoneNumber.
+        // ...
+        this.setState({ captchaOk: true });
+      },
+      'expired-callback': () => {
+        this.setState({ captchaOk: false });
+        // Response expired. Ask user to solve reCAPTCHA again.
+        // ...
+      },
+    });
     window.recaptchaVerifier.render().then((widgetId: any) => {
       window.recaptchaWidgetId = widgetId;
     });
@@ -82,21 +79,23 @@ export default class Login extends React.PureComponent<{
 
   checkPhone = async (phoneNumber: string) => {
     const appVerifier = window.recaptchaVerifier;
-    const result = await firebase
-      .auth()
-      .signInWithPhoneNumber(phoneNumber, appVerifier);
+    const result = await firebase.auth().signInWithPhoneNumber(phoneNumber, appVerifier);
   };
 
   render() {
     const { fetching, phoneNumber, step, captchaOk, phoneOk, pin } = this.state;
     return (
       <Container>
-        <img src={require("../assets/login.svg")} className="d-none-768" />
+        <img
+          src={require('../assets/login.svg')}
+          className="d-none-768"
+          style={{ maxWidth: 450 }}
+        />
         <div className="ma-left-40 ma-left-0-768" style={{ maxWidth: 350 }}>
           <h1 className="fw-300 t-center bold">Iniciar Sesión</h1>
           {step !== LoginStep.verify && (
             <PhoneInput
-              country={"ec"}
+              country={'ec'}
               value={phoneNumber}
               onChange={(v) => {
                 const isOk = phone(`+${v}`).length > 0;
@@ -128,7 +127,7 @@ export default class Login extends React.PureComponent<{
                   const isOk = await auth.validatePIN(`+${phoneNumber}`, pin);
                   this.setState({ fetching: false });
                   if (isOk) {
-                    window.location.href = "/home";
+                    window.location.href = '/home';
                   }
                 }}
               >
@@ -139,7 +138,7 @@ export default class Login extends React.PureComponent<{
 
           <div
             style={{ marginTop: 10 }}
-            className={step === LoginStep.verify ? "d-none" : ""}
+            className={step === LoginStep.verify ? 'd-none' : ''}
             ref={(ref) => (this.recaptcha = ref)}
           ></div>
           <br />
@@ -149,11 +148,11 @@ export default class Login extends React.PureComponent<{
               type="primary"
               disabled={!captchaOk || !phoneOk}
               onClick={async () => {
-                this.setState({ fetching: true, pin: "" });
-                console.log("phone", phoneNumber);
+                this.setState({ fetching: true, pin: '' });
+                console.log('phone', phoneNumber);
                 const sent = await auth.checkPhone(`+${phoneNumber}`);
                 if (!sent) {
-                  message.error("No se pudo enviar el sms de confirmación.");
+                  message.error('No se pudo enviar el sms de confirmación.');
                 }
                 this.setState({
                   step: sent ? LoginStep.verify : LoginStep.input,
@@ -167,7 +166,7 @@ export default class Login extends React.PureComponent<{
 
           <br />
           <br />
-          <div style={{ textAlign: "center", marginTop: 15, letterSpacing: 1 }}>
+          <div style={{ textAlign: 'center', marginTop: 15, letterSpacing: 1 }}>
             Powered by <b>ITZAM</b>
             <br />
             <small>www.itzam.ec</small>

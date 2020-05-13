@@ -50,28 +50,14 @@ export default class Home extends React.PureComponent<{
       this.props.homeStore.username = username;
     }
 
-    window.addEventListener('online', this.onOnline);
-    window.addEventListener('offline', this.onOffline);
+  
   }
 
   componentWillUnmount() {
-    window.removeEventListener('online', this.onOnline);
-    window.removeEventListener('offline', this.onOffline);
+   
   }
 
-  onOnline = () => {
-    dns.resolve('www.google.com', (err) => {
-      if (!err) {
-        console.log('you have internet');
-      } else {
-        console.log('check your connection');
-      }
-    });
-  };
-
-  onOffline = () => {
-    console.log('you dont have internet');
-  };
+ 
 
   join = () => {
     this.props.homeStore.join();

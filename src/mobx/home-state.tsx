@@ -200,15 +200,13 @@ export class HomeStore implements SignalingEvents {
     this.meeduConnect = new MeeduConnect({
       config,
       username: this.username,
+      wsHost: process.env.REACT_APP_MEEDU_CONNECT_HOST!,
     });
     this.loading = true; // update the view
 
     const token = await auth.getAccessToken();
     if (token) {
-      await this.meeduConnect.init({
-        wsHost: process.env.REACT_APP_MEEDU_CONNECT_HOST!,
-        token,
-      });
+      await this.meeduConnect.init();
 
       if (this.meeduConnect.permissionGranted) {
         //
@@ -320,7 +318,7 @@ export class HomeStore implements SignalingEvents {
 
   @action sendMessage = (message: IMessage) => {
     this.messages.push(message);
-    this.meeduConnect.sendMessage(JSON.stringify(message));
+    this.meeduConnect.sendMessage(message);
   };
 
   shareMeet = async (room: Room | null) => {
